@@ -29,7 +29,7 @@ No build tools, no dependencies (except SheetJS and Supabase CDNs). Just a singl
 | **CSS (style 1)** | 10–1010 | Design tokens, component styles, 768px responsive breakpoint |
 | **CSS (style 2)** | 1011–1133 | Mobile breakpoints (480px, 375px) — separate `<style>` block to avoid parse issues |
 | **HTML** | 1134–1200 | Static skeleton: auth gate, header, tabs, main panels, modal, toast container |
-| **JS: Auth** | 1204–1295 | PIN gate, guest/admin mode, session persistence |
+| **JS: Auth** | 1416–1530 | PIN gate (super admin / admin / guest), session persistence |
 | **JS: State** | 1297–1380 | State schema, localStorage persistence, export, import roster (xlsx) |
 | **JS: Utils** | 1382–1515 | `uid()`, `getPlayerName()`, `toast()`, player/group CRUD, group picker modal |
 | **JS: Core Logic** | 1515–1670 | `validateScore()`, `generateDoublesSchedule()`, `computeStandings()` |
@@ -108,14 +108,16 @@ Each page is a hash route — shareable, bookmarkable, with browser back/forward
 
 ## Auth System
 
-| Role | Access |
-|------|--------|
-| **Admin** (PIN: `2025`) | Full CRUD: score entry, config, reset, export/import |
-| **Guest** (no PIN) | Read-only: view standings, matches, dashboard |
+| Role | PIN | Access |
+|------|-----|--------|
+| **Super Admin** | `2809` | Full CRUD + **Reset tournament** (only role that can reset) |
+| **Admin** | `2025` | Full CRUD: score entry, config, export/import — **no reset** |
+| **Guest** | *(none)* | Read-only: view standings, matches, dashboard |
 
-- PIN is stored as `const ADMIN_PIN = '2025'` at line ~1247 — change it there
+- PINs are stored as `const ADMIN_PIN = '2025'` and `const SUPER_ADMIN_PIN = '2809'` — change them there
 - Role persists in `sessionStorage` (survives refresh, clears on tab close)
-- **Logout** button appears in header for both admin and guest — returns to auth gate
+- **Logout** button appears in header for all roles — returns to auth gate
+- Super Admin mode applies CSS class `body.super-admin-mode` which shows `.super-admin-only` elements (the Reset button)
 - Guest mode applies CSS class `body.guest-mode` which:
   - Hides `.btn-primary`, `.btn-success`, `.btn-danger`, `.score-entry`, `.header-actions`, `.admin-only`
   - Disables all inputs and selects via `pointer-events: none`
@@ -245,7 +247,7 @@ No npm packages. No build tools.
 
 ## Known Limitations
 
-1. **PIN is client-side** — not secure, just a convenience gate. Anyone can view source to find the PIN. Adequate for a casual club tournament.
+1. **PINs are client-side** — not secure, just a convenience gate. Anyone can view source to find the PINs. Reset is both UI-gated (`.super-admin-only` CSS) and code-guarded (`isSuperAdmin()` check in `resetTournament()`). Adequate for a casual club tournament.
 2. **No undo** — score submissions and round advancements are permanent (can only Reset entire tournament).
 3. **Fixed 2v2 format** — the schedule generator assumes doubles (2 players per team). Singles or mixed formats would require refactoring `generateDoublesSchedule`.
 4. **Mobile CSS in separate style block** — due to a browser CSS parsing quirk, the mobile media queries must live in a second `<style>` tag. Keep them there when editing.
