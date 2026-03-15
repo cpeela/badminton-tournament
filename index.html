@@ -7,6 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <style>
 /* ==========================================
    DESIGN TOKENS
@@ -984,6 +985,43 @@ body.guest-mode .btn-danger { display: none !important; }
 .role-badge.admin { background: var(--success-bg); color: var(--success); }
 .role-badge.guest { background: var(--bg-elevated); color: var(--text-muted); }
 
+.sync-badge {
+  padding: 3px 10px;
+  border-radius: var(--radius-full);
+  font-family: var(--font-body);
+  font-size: .65rem;
+  font-weight: 600;
+  letter-spacing: .02em;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  transition: all .3s ease;
+}
+.sync-badge::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  display: inline-block;
+}
+.sync-badge.connected { background: var(--success-bg); color: var(--success); }
+.sync-badge.connected::before { background: var(--success); animation: pulse-dot 2s infinite; }
+.sync-badge.offline { background: var(--warning-bg, rgba(251,191,36,.15)); color: var(--warning, #f59e0b); }
+.sync-badge.offline::before { background: var(--warning, #f59e0b); }
+.sync-badge.syncing { background: var(--accent-bg); color: var(--accent); }
+.sync-badge.syncing::before { background: var(--accent); animation: pulse-dot .5s infinite; }
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; }
+  50% { opacity: .3; }
+}
+
+.share-btn {
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
 /* ==========================================
    RESPONSIVE
    ========================================== */
@@ -1162,8 +1200,10 @@ body.guest-mode .btn-danger { display: none !important; }
     </div>
     <span class="badge badge-primary" id="headerStatus">Setup</span>
     <span class="role-badge" id="roleBadge"></span>
+    <span class="sync-badge offline" id="syncBadge" style="display:none">Offline</span>
   </div>
   <div class="header-actions">
+    <button class="btn btn-sm btn-ghost share-btn" onclick="shareTournament()" aria-label="Share tournament link">&#128279; Share</button>
     <button class="btn btn-sm btn-ghost" onclick="exportState()" aria-label="Export tournament data">Export</button>
     <button class="btn btn-sm btn-ghost" onclick="document.getElementById('importFile').click()" aria-label="Import roster from Excel">Import Roster</button>
     <input type="file" id="importFile" accept=".xlsx,.xls,.csv" class="hidden" onchange="importRoster(event)">
@@ -1296,6 +1336,240 @@ function setRole(role) {
 function isAdmin() { return currentRole === 'admin'; }
 
 // ═══════════════════════════════════════════════════════════════
+// SUPABASE REAL-TIME SYNC
+// ═══════════════════════════════════════════════════════════════
+
+// Supabase config — anon key is public-safe (RLS protects data)
+// Replace these with your own Supabase project credentials
+const SUPABASE_URL  = 'https://pgizfgionqetgyqvjums.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBnaXpmZ2lvbnFldGd5cXZqdW1zIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM1NDY1MDYsImV4cCI6MjA4OTEyMjUwNn0.iroc0Ln-RkmqaVf-7ZikcrZe7Behlv9NrmuLByp8lt4';
+
+// Tournament ID from URL: e.g., ?t=spring2026
+function getTournamentId() {
+  const params = new URLSearchParams(window.location.search);
+  return params.get('t') || 'default';
+}
+const TOURNAMENT_ID = getTournamentId();
+
+// Initialize Supabase client (null if CDN didn't load or credentials not set)
+const _supabaseClient = (function() {
+  try {
+    if (window.supabase && SUPABASE_URL !== 'https://YOUR_PROJECT.supabase.co') {
+      return window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    }
+  } catch(e) { console.warn('Supabase client init failed:', e); }
+  return null;
+})();
+
+// Sync state
+let _remoteVersion = 0;
+let _syncEnabled = false;
+let _pushing = false;
+let _subscription = null;
+let _pushQueue = null; // queued push while one is in-flight
+
+function showSyncBadge(status) {
+  const el = document.getElementById('syncBadge');
+  if (!el) return;
+  el.style.display = 'inline-flex';
+  el.className = 'sync-badge ' + status;
+  if (status === 'connected') el.textContent = 'Live';
+  else if (status === 'offline') el.textContent = 'Offline';
+  else if (status === 'syncing') el.textContent = 'Syncing';
+}
+
+async function pushStateToSupabase() {
+  if (!_syncEnabled || !_supabaseClient) return;
+  if (_pushing) {
+    _pushQueue = true; // mark that another push is needed
+    return;
+  }
+  _pushing = true;
+  _pushQueue = null;
+
+  // Strip UI-only keys before sending
+  const stateToSend = Object.assign({}, state);
+  delete stateToSend._activeQR1Group;
+  delete stateToSend._activeQR2Pool;
+
+  const nextVersion = _remoteVersion + 1;
+  try {
+    const { data, error } = await _supabaseClient
+      .from('tournaments')
+      .update({
+        state: stateToSend,
+        version: nextVersion,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', TOURNAMENT_ID)
+      .eq('version', _remoteVersion)
+      .select('version')
+      .single();
+
+    if (error || !data) {
+      // Version conflict — another client wrote first
+      console.warn('Sync conflict, pulling remote state');
+      await pullAndMerge();
+    } else {
+      _remoteVersion = data.version;
+    }
+  } catch (e) {
+    console.warn('Push failed:', e);
+    showSyncBadge('offline');
+  } finally {
+    _pushing = false;
+    // If another save happened while we were pushing, push again
+    if (_pushQueue) {
+      _pushQueue = null;
+      pushStateToSupabase();
+    }
+  }
+}
+
+async function pullAndMerge() {
+  if (!_supabaseClient) return;
+  try {
+    const { data, error } = await _supabaseClient
+      .from('tournaments')
+      .select('state, version')
+      .eq('id', TOURNAMENT_ID)
+      .single();
+
+    if (error || !data) return;
+
+    // Preserve local UI-only state
+    const localUi = {
+      _activeQR1Group: state._activeQR1Group,
+      _activeQR2Pool: state._activeQR2Pool,
+    };
+
+    state = Object.assign({}, data.state, localUi);
+    _remoteVersion = data.version;
+    saveStateLocal();
+    renderAll();
+    showSyncBadge('connected');
+  } catch(e) {
+    console.warn('Pull failed:', e);
+  }
+}
+
+function subscribeToChanges() {
+  if (!_supabaseClient || _subscription) return;
+
+  _subscription = _supabaseClient
+    .channel('tournament-' + TOURNAMENT_ID)
+    .on(
+      'postgres_changes',
+      {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'tournaments',
+        filter: 'id=eq.' + TOURNAMENT_ID
+      },
+      (payload) => {
+        const remote = payload.new;
+        // Ignore if we already have this version (our own write)
+        if (remote.version <= _remoteVersion) return;
+
+        const localUi = {
+          _activeQR1Group: state._activeQR1Group,
+          _activeQR2Pool: state._activeQR2Pool,
+        };
+
+        state = Object.assign({}, remote.state, localUi);
+        _remoteVersion = remote.version;
+        saveStateLocal();
+        renderAll();
+      }
+    )
+    .subscribe((status) => {
+      if (status === 'SUBSCRIBED') showSyncBadge('connected');
+      else if (status === 'CLOSED' || status === 'CHANNEL_ERROR') showSyncBadge('offline');
+    });
+}
+
+async function initSupabase() {
+  if (!_supabaseClient) {
+    // Supabase not configured — hide badge or show offline
+    if (SUPABASE_URL === 'https://YOUR_PROJECT.supabase.co') {
+      // Not configured at all — don't show badge
+      const el = document.getElementById('syncBadge');
+      if (el) el.style.display = 'none';
+    }
+    return;
+  }
+
+  showSyncBadge('syncing');
+
+  try {
+    // Try to fetch existing tournament
+    const { data, error } = await _supabaseClient
+      .from('tournaments')
+      .select('state, version')
+      .eq('id', TOURNAMENT_ID)
+      .maybeSingle();
+
+    if (error) throw error;
+
+    if (!data) {
+      // Tournament doesn't exist yet — create from current local state
+      const stateToSend = Object.assign({}, state);
+      delete stateToSend._activeQR1Group;
+      delete stateToSend._activeQR2Pool;
+
+      const { error: insertErr } = await _supabaseClient
+        .from('tournaments')
+        .insert({ id: TOURNAMENT_ID, state: stateToSend, version: 1 });
+
+      if (insertErr) throw insertErr;
+      _remoteVersion = 1;
+      _syncEnabled = true;
+    } else {
+      // Tournament exists — remote state wins
+      const localUi = {
+        _activeQR1Group: state._activeQR1Group,
+        _activeQR2Pool: state._activeQR2Pool,
+      };
+      state = Object.assign({}, data.state, localUi);
+      _remoteVersion = data.version;
+      saveStateLocal();
+      renderAll();
+      _syncEnabled = true;
+    }
+
+    subscribeToChanges();
+    showSyncBadge('connected');
+  } catch (e) {
+    console.warn('Supabase init failed, using localStorage fallback:', e);
+    showSyncBadge('offline');
+  }
+}
+
+// Offline/online handlers
+window.addEventListener('online', async () => {
+  if (_supabaseClient && _syncEnabled) {
+    showSyncBadge('syncing');
+    await pullAndMerge();
+  }
+});
+window.addEventListener('offline', () => {
+  if (_syncEnabled) showSyncBadge('offline');
+});
+
+function shareTournament() {
+  const url = window.location.origin + window.location.pathname + '?t=' + TOURNAMENT_ID;
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(url).then(() => {
+      toast('Tournament link copied! Share with players to view live scores.', 'success');
+    }).catch(() => {
+      prompt('Copy this tournament link:', url);
+    });
+  } else {
+    prompt('Copy this tournament link:', url);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
 // STATE MANAGEMENT
 // ═══════════════════════════════════════════════════════════════
 
@@ -1343,8 +1617,15 @@ function loadState() {
   return defaultState();
 }
 
-function saveState() {
+function saveStateLocal() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+}
+
+function saveState() {
+  saveStateLocal();
+  if (_syncEnabled) {
+    pushStateToSupabase();
+  }
 }
 
 function exportState() {
@@ -2909,6 +3190,7 @@ if (state.players.length === 0) {
 }
 
 renderAll();
+initSupabase(); // async — boots from localStorage first, then syncs with Supabase
 </script>
 </body>
 </html>
