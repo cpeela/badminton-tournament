@@ -1,0 +1,110 @@
+{
+  "config": {
+    "tournamentName": "SoCal Badminton Club Tournament",
+    "date": "2026-03-15",
+    "venue": "Orange County Badminton Club",
+    "numGroups": 5,
+    "playersPerGroup": 6,
+    "matchesPerPlayer": 4,
+    "pointsToWin": 21,
+    "deuceEnabled": true,
+    "deuceCap": 25,
+    "winWeight": 20,
+    "advanceTop": 3,
+    "semiFinalSlots": 8,
+    "finalsFormat": "bestOf3"
+  },
+  "players": [
+    { "id": "p01", "name": "Makarand" },
+    { "id": "p02", "name": "Puneet" },
+    { "id": "p03", "name": "Rijo" },
+    { "id": "p04", "name": "Sunil" },
+    { "id": "p05", "name": "Siddarth" },
+    { "id": "p06", "name": "Syed" },
+    { "id": "p07", "name": "Srini" },
+    { "id": "p08", "name": "Mayur" },
+    { "id": "p09", "name": "Harsha" },
+    { "id": "p10", "name": "Tensingh" },
+    { "id": "p11", "name": "Madhu" },
+    { "id": "p12", "name": "Arjun" },
+    { "id": "p13", "name": "Ajay" },
+    { "id": "p14", "name": "Vikram" },
+    { "id": "p15", "name": "Abhijat" },
+    { "id": "p16", "name": "Nishant" },
+    { "id": "p17", "name": "Saurav" },
+    { "id": "p18", "name": "John" },
+    { "id": "p19", "name": "Pankaj" },
+    { "id": "p20", "name": "Nishtha" },
+    { "id": "p21", "name": "Nikhil" },
+    { "id": "p22", "name": "Prakaash" },
+    { "id": "p23", "name": "Amit S" },
+    { "id": "p24", "name": "Chakresh" },
+    { "id": "p25", "name": "Amit J" },
+    { "id": "p26", "name": "Sabbir" },
+    { "id": "p27", "name": "Siri" },
+    { "id": "p28", "name": "Arun" },
+    { "id": "p29", "name": "Vijay" },
+    { "id": "p30", "name": "Kishor" }
+  ],
+  "groups": [
+    {
+      "id": "g1",
+      "name": "Group A",
+      "playerIds": ["p01", "p06", "p11", "p16", "p21", "p26"],
+      "leaderId": "p16",
+      "court": "Court 8"
+    },
+    {
+      "id": "g2",
+      "name": "Group B",
+      "playerIds": ["p02", "p07", "p12", "p17", "p22", "p27"],
+      "leaderId": "p22",
+      "court": "Court 9"
+    },
+    {
+      "id": "g3",
+      "name": "Group C",
+      "playerIds": ["p03", "p08", "p13", "p18", "p23", "p28"],
+      "leaderId": "p08",
+      "court": "Court 10"
+    },
+    {
+      "id": "g4",
+      "name": "Group D",
+      "playerIds": ["p04", "p09", "p14", "p19", "p24", "p29"],
+      "leaderId": "p19",
+      "court": "Court 11"
+    },
+    {
+      "id": "g5",
+      "name": "Group E",
+      "playerIds": ["p05", "p10", "p15", "p20", "p25", "p30"],
+      "leaderId": "p15",
+      "court": "Court 12"
+    }
+  ],
+  "rounds": {
+    "qr1": {
+      "status": "not_started",
+      "matches": [],
+      "standings": []
+    },
+    "qr2": {
+      "status": "not_started",
+      "pools": {
+        "champion": [],
+        "consolation": []
+      },
+      "matches": [],
+      "standings": []
+    },
+    "semis": {
+      "status": "not_started",
+      "matches": []
+    },
+    "finals": {
+      "status": "not_started",
+      "matches": []
+    }
+  }
+}

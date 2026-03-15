@@ -1,0 +1,2189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Badminton Tournament Manager</title>
+<style>
+:root {
+  --bg: #0f1117;
+  --bg-card: #1a1d27;
+  --bg-card-hover: #222636;
+  --bg-input: #13151d;
+  --border: #2a2e3d;
+  --border-focus: #6366f1;
+  --text: #e2e4ed;
+  --text-dim: #8b8fa3;
+  --text-heading: #f0f1f5;
+  --primary: #6366f1;
+  --primary-hover: #818cf8;
+  --primary-bg: rgba(99,102,241,.12);
+  --success: #22c55e;
+  --success-bg: rgba(34,197,94,.12);
+  --warning: #f59e0b;
+  --warning-bg: rgba(245,158,11,.12);
+  --danger: #ef4444;
+  --danger-bg: rgba(239,68,68,.12);
+  --champion: #f59e0b;
+  --champion-bg: rgba(245,158,11,.10);
+  --consolation: #8b5cf6;
+  --consolation-bg: rgba(139,92,246,.10);
+  --radius: 8px;
+  --radius-lg: 12px;
+  --shadow: 0 2px 8px rgba(0,0,0,.3);
+  --transition: .2s ease;
+  --font: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html { font-size: 14px; }
+body {
+  font-family: var(--font);
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  line-height: 1.5;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+/* Header */
+.header {
+  background: var(--bg-card);
+  border-bottom: 1px solid var(--border);
+  padding: 12px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+.header-left { display: flex; align-items: center; gap: 16px; }
+.header h1 { font-size: 1.25rem; font-weight: 700; color: var(--text-heading); }
+.header .badge {
+  font-size: .7rem;
+  padding: 2px 8px;
+  border-radius: 99px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .5px;
+}
+.header-actions { display: flex; gap: 8px; }
+.tournament-meta {
+  font-size: .8rem;
+  color: var(--text-dim);
+  display: flex;
+  gap: 16px;
+}
+
+/* Tabs */
+.tabs {
+  display: flex;
+  background: var(--bg-card);
+  border-bottom: 1px solid var(--border);
+  padding: 0 24px;
+  overflow-x: auto;
+  gap: 4px;
+}
+.tab {
+  padding: 10px 18px;
+  cursor: pointer;
+  color: var(--text-dim);
+  font-weight: 500;
+  font-size: .85rem;
+  border-bottom: 2px solid transparent;
+  transition: var(--transition);
+  white-space: nowrap;
+  user-select: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.tab:hover { color: var(--text); }
+.tab.active { color: var(--primary); border-bottom-color: var(--primary); }
+.tab .tab-badge {
+  font-size: .65rem;
+  padding: 1px 6px;
+  border-radius: 99px;
+  background: var(--border);
+  color: var(--text-dim);
+}
+.tab.active .tab-badge { background: var(--primary-bg); color: var(--primary); }
+
+/* Main */
+.main { padding: 24px; max-width: 1400px; margin: 0 auto; }
+.tab-content { display: none; }
+.tab-content.active { display: block; }
+
+/* Cards */
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+  margin-bottom: 16px;
+}
+.card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+.card-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-heading);
+}
+.card-subtitle {
+  font-size: .8rem;
+  color: var(--text-dim);
+  margin-top: 2px;
+}
+
+/* Buttons */
+.btn {
+  padding: 8px 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-card);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: .82rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: var(--transition);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+.btn:hover { background: var(--bg-card-hover); }
+.btn-primary { background: var(--primary); border-color: var(--primary); color: #fff; }
+.btn-primary:hover { background: var(--primary-hover); border-color: var(--primary-hover); }
+.btn-success { background: var(--success); border-color: var(--success); color: #fff; }
+.btn-success:hover { opacity: .9; }
+.btn-danger { background: var(--danger); border-color: var(--danger); color: #fff; }
+.btn-danger:hover { opacity: .9; }
+.btn-sm { padding: 4px 10px; font-size: .75rem; }
+.btn-icon { padding: 6px 8px; }
+.btn:disabled { opacity: .4; cursor: not-allowed; }
+.btn-group { display: flex; gap: 8px; flex-wrap: wrap; }
+
+/* Inputs */
+input, select, textarea {
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text);
+  padding: 8px 12px;
+  font-family: var(--font);
+  font-size: .85rem;
+  transition: var(--transition);
+  width: 100%;
+}
+input:focus, select:focus, textarea:focus {
+  outline: none;
+  border-color: var(--border-focus);
+  box-shadow: 0 0 0 3px rgba(99,102,241,.15);
+}
+input[type="number"] { width: 80px; }
+label { font-size: .8rem; color: var(--text-dim); font-weight: 500; margin-bottom: 4px; display: block; }
+
+/* Form grid */
+.form-row { display: flex; gap: 16px; margin-bottom: 12px; flex-wrap: wrap; }
+.form-group { flex: 1; min-width: 150px; }
+.form-inline { display: flex; align-items: center; gap: 8px; }
+
+/* Tables */
+.table-wrap { overflow-x: auto; }
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: .82rem;
+}
+th, td {
+  padding: 8px 12px;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+}
+th {
+  color: var(--text-dim);
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: .7rem;
+  letter-spacing: .5px;
+  position: sticky;
+  top: 0;
+  background: var(--bg-card);
+}
+tr:hover { background: rgba(255,255,255,.02); }
+tr.champion-row { background: var(--champion-bg); }
+tr.consolation-row { background: var(--consolation-bg); }
+tr.highlight { background: var(--primary-bg); }
+
+/* Badges */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 99px;
+  font-size: .7rem;
+  font-weight: 600;
+}
+.badge-success { background: var(--success-bg); color: var(--success); }
+.badge-warning { background: var(--warning-bg); color: var(--warning); }
+.badge-danger { background: var(--danger-bg); color: var(--danger); }
+.badge-primary { background: var(--primary-bg); color: var(--primary); }
+.badge-champion { background: var(--champion-bg); color: var(--champion); }
+.badge-consolation { background: var(--consolation-bg); color: var(--consolation); }
+
+/* Grid layouts */
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+.grid-auto { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; }
+
+/* Player chip */
+.player-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: 99px;
+  font-size: .78rem;
+  cursor: default;
+}
+.player-chip .remove {
+  cursor: pointer;
+  color: var(--text-dim);
+  font-size: .9rem;
+  margin-left: 2px;
+}
+.player-chip .remove:hover { color: var(--danger); }
+.player-chip.leader { border-color: var(--warning); }
+.player-chip.leader::before { content: '★ '; color: var(--warning); }
+
+/* Match card */
+.match-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px 16px;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  transition: var(--transition);
+}
+.match-card:hover { border-color: var(--border-focus); }
+.match-card.completed { opacity: .85; }
+.match-card .match-num {
+  font-size: .7rem;
+  color: var(--text-dim);
+  min-width: 24px;
+  text-align: center;
+}
+.match-card .team {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.match-card .team-names { font-weight: 500; font-size: .85rem; }
+.match-card .vs { color: var(--text-dim); font-size: .75rem; font-weight: 600; }
+.match-card .score-display {
+  font-family: var(--font-mono);
+  font-size: 1.1rem;
+  font-weight: 700;
+  min-width: 80px;
+  text-align: center;
+}
+.match-card .score-display .winner-score { color: var(--success); }
+.match-card .score-display .loser-score { color: var(--danger); }
+.match-card .score-entry {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.match-card .score-entry input {
+  width: 50px;
+  text-align: center;
+  font-family: var(--font-mono);
+  font-weight: 600;
+  padding: 6px;
+}
+.match-entry { display: flex; flex-direction: column; gap: 4px; }
+.match-entry-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.match-meta { display: flex; gap: 4px; align-items: center; }
+.match-meta-tag {
+  font-size: .7rem;
+  padding: 2px 7px;
+  border-radius: 99px;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+  white-space: nowrap;
+}
+
+/* Group header */
+.group-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background: var(--bg-input);
+  border-radius: var(--radius);
+  margin-bottom: 12px;
+  cursor: pointer;
+  user-select: none;
+}
+.group-header:hover { background: var(--bg-card-hover); }
+.group-header h3 { font-size: .95rem; }
+.group-header .group-meta { display: flex; gap: 12px; align-items: center; }
+
+/* Progress bar */
+.progress-bar {
+  height: 6px;
+  background: var(--border);
+  border-radius: 3px;
+  overflow: hidden;
+  margin: 8px 0;
+}
+.progress-bar .fill {
+  height: 100%;
+  background: var(--primary);
+  border-radius: 3px;
+  transition: width .3s ease;
+}
+
+/* Modal */
+.modal-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.6);
+  z-index: 200;
+  align-items: center;
+  justify-content: center;
+}
+.modal-overlay.active { display: flex; }
+.modal {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  width: 90%;
+  max-width: 500px;
+  max-height: 80vh;
+  overflow-y: auto;
+  box-shadow: 0 8px 32px rgba(0,0,0,.4);
+}
+.modal h2 { font-size: 1.1rem; margin-bottom: 16px; }
+
+/* Sub-tabs */
+.sub-tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+.sub-tab {
+  padding: 6px 14px;
+  border-radius: var(--radius);
+  cursor: pointer;
+  font-size: .8rem;
+  font-weight: 500;
+  color: var(--text-dim);
+  background: var(--bg-input);
+  border: 1px solid transparent;
+  transition: var(--transition);
+}
+.sub-tab:hover { color: var(--text); }
+.sub-tab.active { color: var(--primary); border-color: var(--primary); background: var(--primary-bg); }
+
+/* Finals match */
+.finals-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  text-align: center;
+}
+.finals-card .pool-label {
+  font-size: .75rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 8px;
+}
+.finals-card .teams-display {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 24px;
+  margin: 16px 0;
+}
+.finals-card .team-block {
+  flex: 1;
+  max-width: 200px;
+}
+.finals-card .team-block .names {
+  font-size: 1rem;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+.finals-card .game-scores {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 12px;
+}
+.finals-card .game-score {
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 8px 16px;
+  min-width: 80px;
+}
+.finals-card .game-score .game-label {
+  font-size: .65rem;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+.finals-card .game-score .scores {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: 1.1rem;
+}
+.winner-banner {
+  background: linear-gradient(135deg, var(--champion-bg), var(--primary-bg));
+  border: 1px solid var(--champion);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+  text-align: center;
+  margin-top: 12px;
+}
+.winner-banner h3 { color: var(--champion); font-size: 1.2rem; }
+
+/* Dashboard stats */
+.stat-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 16px 20px;
+}
+.stat-card .stat-value {
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: var(--text-heading);
+}
+.stat-card .stat-label {
+  font-size: .75rem;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: .5px;
+}
+
+/* Empty state */
+.empty-state {
+  text-align: center;
+  padding: 40px;
+  color: var(--text-dim);
+}
+.empty-state .icon { font-size: 2rem; margin-bottom: 12px; }
+.empty-state p { font-size: .9rem; }
+
+/* Toast */
+.toast-container {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 300;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.toast {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 10px 16px;
+  font-size: .82rem;
+  box-shadow: var(--shadow);
+  animation: slideIn .3s ease;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.toast.success { border-left: 3px solid var(--success); }
+.toast.error { border-left: 3px solid var(--danger); }
+.toast.info { border-left: 3px solid var(--primary); }
+@keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+/* Responsive */
+@media (max-width: 768px) {
+  .main { padding: 12px; }
+  .grid-2, .grid-3 { grid-template-columns: 1fr; }
+  .header { padding: 10px 12px; }
+  .tabs { padding: 0 8px; }
+  .card { padding: 12px; }
+  .match-card { flex-wrap: wrap; }
+}
+
+/* Print */
+@media print {
+  .header, .tabs, .btn, .score-entry, .header-actions { display: none !important; }
+  body { background: #fff; color: #000; }
+  .card { border: 1px solid #ccc; break-inside: avoid; }
+  .tab-content { display: block !important; }
+  th { background: #f0f0f0; }
+}
+
+.collapsible-content { overflow: hidden; transition: max-height .3s ease; }
+.collapsible-content.collapsed { max-height: 0 !important; }
+
+/* Score input inline */
+.score-inline {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.score-inline input {
+  width: 44px;
+  text-align: center;
+  font-family: var(--font-mono);
+  font-weight: 600;
+  padding: 4px;
+  font-size: .85rem;
+}
+.score-inline .dash { color: var(--text-dim); font-weight: 700; }
+
+/* Drag hint */
+.drag-hint {
+  font-size: .75rem;
+  color: var(--text-dim);
+  font-style: italic;
+  margin-bottom: 8px;
+}
+
+.players-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-height: 40px;
+  padding: 8px;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius);
+}
+
+/* Group chip (clickable in player table) */
+.group-chip {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 99px;
+  font-size: .75rem;
+  font-weight: 600;
+  background: var(--primary-bg);
+  color: var(--primary);
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: var(--transition);
+}
+.group-chip:hover { border-color: var(--primary); background: rgba(99,102,241,.2); }
+.group-chip.unassigned { background: var(--danger-bg); color: var(--danger); }
+.group-chip.unassigned:hover { border-color: var(--danger); }
+
+/* Leader star toggle */
+.leader-toggle {
+  font-size: 1.1rem;
+  cursor: pointer;
+  color: var(--border);
+  transition: var(--transition);
+  user-select: none;
+}
+.leader-toggle:hover { color: var(--warning); transform: scale(1.2); }
+.leader-toggle.active { color: var(--warning); }
+
+.text-center { text-align: center; }
+.text-right { text-align: right; }
+.mt-8 { margin-top: 8px; }
+.mt-16 { margin-top: 16px; }
+.mb-8 { margin-bottom: 8px; }
+.mb-16 { margin-bottom: 16px; }
+.flex { display: flex; }
+.items-center { align-items: center; }
+.justify-between { justify-content: space-between; }
+.gap-8 { gap: 8px; }
+.gap-16 { gap: 16px; }
+.w-full { width: 100%; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-left">
+    <h1 id="headerTitle">Badminton Tournament Manager</h1>
+    <span class="badge badge-primary" id="headerStatus">Setup</span>
+  </div>
+  <div class="header-actions">
+    <button class="btn btn-sm" onclick="exportState()">Export</button>
+    <button class="btn btn-sm" onclick="document.getElementById('importFile').click()">Import</button>
+    <input type="file" id="importFile" accept=".json" style="display:none" onchange="importState(event)">
+    <button class="btn btn-sm" onclick="resetTournament()">Reset</button>
+  </div>
+</div>
+
+<div class="tabs" id="mainTabs">
+  <div class="tab active" data-tab="setup">Setup</div>
+  <div class="tab" data-tab="qr1">Qualifier R1 <span class="tab-badge" id="qr1Badge">0%</span></div>
+  <div class="tab" data-tab="qr2">Qualifier R2 <span class="tab-badge" id="qr2Badge">0%</span></div>
+  <div class="tab" data-tab="semis">Semi-Finals</div>
+  <div class="tab" data-tab="finals">Finals</div>
+  <div class="tab" data-tab="dashboard">Dashboard</div>
+</div>
+
+<div class="main">
+  <!-- SETUP TAB -->
+  <div class="tab-content active" id="tab-setup"></div>
+
+  <!-- QR1 TAB -->
+  <div class="tab-content" id="tab-qr1"></div>
+
+  <!-- QR2 TAB -->
+  <div class="tab-content" id="tab-qr2"></div>
+
+  <!-- SEMI-FINALS TAB -->
+  <div class="tab-content" id="tab-semis"></div>
+
+  <!-- FINALS TAB -->
+  <div class="tab-content" id="tab-finals"></div>
+
+  <!-- DASHBOARD TAB -->
+  <div class="tab-content" id="tab-dashboard"></div>
+</div>
+
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal" id="modalContent"></div>
+</div>
+
+<div class="toast-container" id="toastContainer"></div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════
+// STATE MANAGEMENT
+// ═══════════════════════════════════════════════════════════════
+
+const STORAGE_KEY = 'badminton_tournament_v2';
+
+function defaultConfig() {
+  return {
+    tournamentName: 'SoCal Badminton Club Tournament',
+    date: '2026-03-15',
+    venue: 'Orange County Badminton Club',
+    numGroups: 5,
+    playersPerGroup: 6,
+    matchesPerPlayer: 4,
+    pointsToWin: 21,
+    deuceEnabled: true,
+    deuceCap: 25,
+    winWeight: 20,
+    advanceTop: 3,
+    semiFinalSlots: 8,
+    finalsFormat: 'bestOf3'
+  };
+}
+
+function defaultState() {
+  return {
+    config: defaultConfig(),
+    players: [],
+    groups: [],
+    rounds: {
+      qr1: { status: 'not_started', matches: [], standings: [] },
+      qr2: { status: 'not_started', pools: { champion: [], consolation: [] }, matches: [], standings: [] },
+      semis: { status: 'not_started', matches: [] },
+      finals: { status: 'not_started', matches: [] }
+    }
+  };
+}
+
+let state = loadState();
+
+function loadState() {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) return JSON.parse(saved);
+  } catch(e) {}
+  return defaultState();
+}
+
+function saveState() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+}
+
+function exportState() {
+  const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `tournament_${state.config.date || 'export'}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+  toast('Tournament exported', 'success');
+}
+
+function importState(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    try {
+      state = JSON.parse(ev.target.result);
+      saveState();
+      renderAll();
+      toast('Tournament imported', 'success');
+    } catch(err) {
+      toast('Invalid file', 'error');
+    }
+  };
+  reader.readAsText(file);
+  e.target.value = '';
+}
+
+function resetTournament() {
+  if (!confirm('Reset entire tournament? This cannot be undone.')) return;
+  state = defaultState();
+  saveState();
+  renderAll();
+  toast('Tournament reset', 'info');
+}
+
+// ═══════════════════════════════════════════════════════════════
+// UTILITY FUNCTIONS
+// ═══════════════════════════════════════════════════════════════
+
+function uid() { return Math.random().toString(36).substr(2, 9); }
+
+function toast(msg, type = 'info') {
+  const c = document.getElementById('toastContainer');
+  const t = document.createElement('div');
+  t.className = `toast ${type}`;
+  t.textContent = msg;
+  c.appendChild(t);
+  setTimeout(() => t.remove(), 3000);
+}
+
+function openModal(html) {
+  document.getElementById('modalContent').innerHTML = html;
+  document.getElementById('modalOverlay').classList.add('active');
+}
+
+function closeModal() {
+  document.getElementById('modalOverlay').classList.remove('active');
+}
+
+document.getElementById('modalOverlay').addEventListener('click', (e) => {
+  if (e.target === e.currentTarget) closeModal();
+});
+
+function getPlayerName(id) {
+  const p = state.players.find(p => p.id === id);
+  return p ? p.name : '?';
+}
+
+function getPlayerNames(ids) {
+  return ids.map(getPlayerName).join(' & ');
+}
+
+function validateScore(s1, s2, config) {
+  const max = config.pointsToWin;
+  const cap = config.deuceCap;
+  s1 = parseInt(s1); s2 = parseInt(s2);
+  if (isNaN(s1) || isNaN(s2) || s1 < 0 || s2 < 0) return false;
+  if (s1 === s2) return false;
+  const winner = Math.max(s1, s2);
+  const loser = Math.min(s1, s2);
+  if (!config.deuceEnabled) return winner === max && loser < max;
+  if (loser < max - 1) return winner === max;
+  if (loser >= max - 1) {
+    if (winner === cap) return loser >= cap - 2;
+    return winner - loser === 2 && winner <= cap;
+  }
+  return false;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// SCHEDULE GENERATION
+// ═══════════════════════════════════════════════════════════════
+
+function generateDoublesSchedule(playerIds, matchesPerPlayer) {
+  const n = playerIds.length;
+  if (n < 4) return [];
+  const totalMatchesNeeded = (n * matchesPerPlayer) / 4;
+
+  // Generate all pairs, then all valid pair-vs-pair matchups (no player overlap)
+  const pairs = [];
+  for (let i = 0; i < n; i++)
+    for (let j = i + 1; j < n; j++)
+      pairs.push([playerIds[i], playerIds[j]]);
+
+  const allMatchups = [];
+  for (let i = 0; i < pairs.length; i++)
+    for (let j = i + 1; j < pairs.length; j++) {
+      const p1 = pairs[i], p2 = pairs[j];
+      const ids = new Set([...p1, ...p2]);
+      if (ids.size === 4) allMatchups.push([p1, p2]);
+    }
+
+  // Backtracking solver with randomized restarts
+  function solve(matchups, target, playerIds, maxPerPlayer) {
+    const matchCount = {};
+    playerIds.forEach(id => matchCount[id] = 0);
+    const selected = [];
+
+    function backtrack(startIdx) {
+      if (selected.length === target) return true;
+      for (let i = startIdx; i < matchups.length; i++) {
+        const [p1, p2] = matchups[i];
+        const all = [...p1, ...p2];
+        if (all.some(id => matchCount[id] >= maxPerPlayer)) continue;
+        // Select this matchup
+        selected.push({ team1: [...p1], team2: [...p2] });
+        all.forEach(id => matchCount[id]++);
+        if (backtrack(i + 1)) return true;
+        // Undo
+        selected.pop();
+        all.forEach(id => matchCount[id]--);
+      }
+      return false;
+    }
+
+    backtrack(0);
+    return selected;
+  }
+
+  // Try with shuffled orderings for variety and partner diversity
+  let bestResult = null;
+  const attempts = 10;
+
+  for (let attempt = 0; attempt < attempts; attempt++) {
+    const shuffled = [...allMatchups];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+
+    const result = solve(shuffled, totalMatchesNeeded, playerIds, matchesPerPlayer);
+    if (result.length === totalMatchesNeeded) {
+      bestResult = result;
+      break;
+    }
+    if (!bestResult || result.length > bestResult.length) {
+      bestResult = result;
+    }
+  }
+
+  return bestResult || [];
+}
+
+// ═══════════════════════════════════════════════════════════════
+// STANDINGS CALCULATION
+// ═══════════════════════════════════════════════════════════════
+
+function computeStandings(playerIds, matches, config) {
+  const stats = {};
+  playerIds.forEach(id => {
+    stats[id] = {
+      playerId: id,
+      wins: 0, losses: 0, matchesPlayed: 0,
+      totalPointsScored: 0, totalPointsConceded: 0,
+      winPointDiff: 0, lossPointDiff: 0,
+      weightedPoints: 0
+    };
+  });
+
+  matches.forEach(m => {
+    if (m.status !== 'completed') return;
+    const s1 = m.team1.score, s2 = m.team2.score;
+    const t1Won = s1 > s2;
+
+    m.team1.playerIds.forEach(id => {
+      if (!stats[id]) return;
+      stats[id].matchesPlayed++;
+      stats[id].totalPointsScored += s1;
+      stats[id].totalPointsConceded += s2;
+      if (t1Won) {
+        stats[id].wins++;
+        stats[id].winPointDiff += (s1 - s2);
+      } else {
+        stats[id].losses++;
+        stats[id].lossPointDiff += (s2 - s1);
+      }
+    });
+
+    m.team2.playerIds.forEach(id => {
+      if (!stats[id]) return;
+      stats[id].matchesPlayed++;
+      stats[id].totalPointsScored += s2;
+      stats[id].totalPointsConceded += s1;
+      if (!t1Won) {
+        stats[id].wins++;
+        stats[id].winPointDiff += (s2 - s1);
+      } else {
+        stats[id].losses++;
+        stats[id].lossPointDiff += (s1 - s2);
+      }
+    });
+  });
+
+  Object.values(stats).forEach(s => {
+    s.weightedPoints = (s.wins * config.winWeight) + s.winPointDiff - s.lossPointDiff;
+  });
+
+  return Object.values(stats);
+}
+
+function sortStandingsQR1(standings) {
+  return standings.sort((a, b) => {
+    if (b.weightedPoints !== a.weightedPoints) return b.weightedPoints - a.weightedPoints;
+    if (b.totalPointsScored !== a.totalPointsScored) return b.totalPointsScored - a.totalPointsScored;
+    return a.totalPointsConceded - b.totalPointsConceded;
+  });
+}
+
+function sortStandingsQR2(standings, qr1Rankings) {
+  return standings.sort((a, b) => {
+    if (b.weightedPoints !== a.weightedPoints) return b.weightedPoints - a.weightedPoints;
+    if (b.totalPointsScored !== a.totalPointsScored) return b.totalPointsScored - a.totalPointsScored;
+    const aRank = qr1Rankings[a.playerId] || 999;
+    const bRank = qr1Rankings[b.playerId] || 999;
+    return aRank - bRank;
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════
+// RENDERING - SETUP TAB
+// ═══════════════════════════════════════════════════════════════
+
+function isTournamentStarted() {
+  return state.rounds.qr1.status !== 'not_started';
+}
+
+function renderSetup() {
+  const c = state.config;
+  const totalPlayers = c.numGroups * c.playersPerGroup;
+  const locked = isTournamentStarted();
+
+  let html = '';
+
+  if (locked) {
+    html += `<div style="background:var(--warning-bg);border:1px solid var(--warning);border-radius:var(--radius);padding:10px 16px;margin-bottom:16px;font-size:.85rem;color:var(--warning);display:flex;align-items:center;gap:8px">
+      <strong>Setup Locked</strong> — Tournament is in progress. Reset to make changes.
+    </div>`;
+  }
+
+  html += `
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <div class="card-title">Tournament Configuration</div>
+          <div class="card-subtitle">Set up tournament parameters</div>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group" style="flex:2">
+          <label>Tournament Name</label>
+          <input type="text" value="${c.tournamentName}" ${locked ? 'disabled' : ''} onchange="state.config.tournamentName=this.value;saveState();updateHeader()">
+        </div>
+        <div class="form-group">
+          <label>Date</label>
+          <input type="date" value="${c.date}" ${locked ? 'disabled' : ''} onchange="state.config.date=this.value;saveState()">
+        </div>
+        <div class="form-group" style="flex:2">
+          <label>Venue</label>
+          <input type="text" value="${c.venue}" ${locked ? 'disabled' : ''} onchange="state.config.venue=this.value;saveState()">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Groups</label>
+          <input type="number" min="2" max="20" value="${c.numGroups}" ${locked ? 'disabled' : ''} onchange="updateConfig('numGroups',+this.value)">
+        </div>
+        <div class="form-group">
+          <label>Players / Group</label>
+          <input type="number" min="4" max="12" value="${c.playersPerGroup}" ${locked ? 'disabled' : ''} onchange="updateConfig('playersPerGroup',+this.value)">
+        </div>
+        <div class="form-group">
+          <label>Matches / Player</label>
+          <input type="number" min="1" max="10" value="${c.matchesPerPlayer}" ${locked ? 'disabled' : ''} onchange="updateConfig('matchesPerPlayer',+this.value)">
+        </div>
+        <div class="form-group">
+          <label>Points to Win</label>
+          <input type="number" min="11" max="30" value="${c.pointsToWin}" ${locked ? 'disabled' : ''} onchange="updateConfig('pointsToWin',+this.value)">
+        </div>
+        <div class="form-group">
+          <label>Deuce Cap</label>
+          <input type="number" min="${c.pointsToWin}" max="40" value="${c.deuceCap}" ${locked ? 'disabled' : ''} onchange="updateConfig('deuceCap',+this.value)">
+        </div>
+        <div class="form-group">
+          <label>Win Weight</label>
+          <input type="number" min="1" max="100" value="${c.winWeight}" ${locked ? 'disabled' : ''} onchange="updateConfig('winWeight',+this.value)">
+        </div>
+        <div class="form-group">
+          <label>Advance Top N</label>
+          <input type="number" min="1" max="${c.playersPerGroup - 1}" value="${c.advanceTop}" ${locked ? 'disabled' : ''} onchange="updateConfig('advanceTop',+this.value)">
+        </div>
+        <div class="form-group">
+          <label>Semi-Final Slots</label>
+          <input type="number" min="4" max="16" value="${c.semiFinalSlots}" ${locked ? 'disabled' : ''} onchange="updateConfig('semiFinalSlots',+this.value)">
+        </div>
+      </div>
+      <div style="font-size:.8rem;color:var(--text-dim);margin-top:8px">
+        Total players needed: <strong>${totalPlayers}</strong> |
+        Champion Pool: <strong>${c.numGroups * c.advanceTop}</strong> |
+        Consolation Pool: <strong>${c.numGroups * (c.playersPerGroup - c.advanceTop)}</strong> |
+        Weighted Points = (Wins × ${c.winWeight}) + (Win Point Diff) − (Loss Point Diff)
+      </div>
+    </div>`;
+
+  if (!locked) {
+    html += `
+    <!-- Add Player Form -->
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <div class="card-title">Add Player</div>
+        </div>
+        <div class="btn-group">
+          <button class="btn btn-sm" onclick="showBulkAdd()">Bulk Add</button>
+          <button class="btn btn-sm" onclick="autoAssignGroups()">Auto-Assign Random</button>
+        </div>
+      </div>
+      <div class="form-row" style="align-items:flex-end">
+        <div class="form-group" style="flex:1">
+          <label>First Name</label>
+          <input type="text" id="addFirstName" placeholder="First name">
+        </div>
+        <div class="form-group" style="flex:1">
+          <label>Last Name</label>
+          <input type="text" id="addLastName" placeholder="Last name (optional)">
+        </div>
+        <div class="form-group" style="flex:1">
+          <label>Group (optional)</label>
+          <select id="addGroup">
+            <option value="">— Unassigned —</option>
+            ${state.groups.map(g => {
+              const count = g.playerIds.length;
+              const full = count >= c.playersPerGroup;
+              return `<option value="${g.id}" ${full ? 'disabled' : ''}>${g.name} (${count}/${c.playersPerGroup})</option>`;
+            }).join('')}
+          </select>
+        </div>
+        <div class="form-group" style="flex:0 0 auto;display:flex;align-items:center;gap:8px">
+          <label style="display:flex;align-items:center;gap:4px;cursor:pointer;white-space:nowrap">
+            <input type="checkbox" id="addLeader" style="width:auto"> Group Leader
+          </label>
+        </div>
+        <div class="form-group" style="flex:0 0 auto">
+          <button class="btn btn-primary" onclick="addPlayerFromForm()">+ Add</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Players by Group -->
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <div class="card-title">Players (${state.players.length} / ${totalPlayers})</div>
+          <div class="card-subtitle">Click a group chip to reassign. Click the star to toggle leader.</div>
+        </div>
+      </div>
+      ${renderPlayersByGroup()}
+    </div>`;
+  } else {
+    html += `
+    <!-- Players (read-only) -->
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <div class="card-title">Players (${state.players.length})</div>
+        </div>
+      </div>
+      ${renderGroupSummary()}
+    </div>`;
+  }
+
+  if (!locked) {
+    html += `
+    <!-- Group Summary -->
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <div class="card-title">Group Summary</div>
+        </div>
+      </div>
+      ${renderGroupSummary()}
+    </div>
+
+    <div style="text-align:center;margin-top:16px">
+      <button class="btn btn-primary" onclick="startTournament()" ${state.players.length < totalPlayers ? 'disabled' : ''}>
+        Start Tournament — Generate QR1 Schedule
+      </button>
+      ${state.players.length < totalPlayers ? `<div style="color:var(--text-dim);font-size:.8rem;margin-top:6px">Need ${totalPlayers - state.players.length} more players</div>` : ''}
+    </div>`;
+  }
+
+  document.getElementById('tab-setup').innerHTML = html;
+
+  // Add enter key support for add form
+  if (!locked) {
+    const fnInput = document.getElementById('addFirstName');
+    const lnInput = document.getElementById('addLastName');
+    if (fnInput) {
+      fnInput.addEventListener('keydown', e => { if (e.key === 'Enter') addPlayerFromForm(); });
+      lnInput.addEventListener('keydown', e => { if (e.key === 'Enter') addPlayerFromForm(); });
+    }
+  }
+}
+
+function renderPlayersByGroup() {
+  if (!state.players.length) return '<div class="empty-state"><p>No players added yet</p></div>';
+  if (!state.groups.length) ensureGroups();
+
+  const unassigned = state.players.filter(p => !state.groups.some(g => g.playerIds.includes(p.id)));
+
+  let html = '';
+
+  // Render each group as a section
+  state.groups.forEach(g => {
+    const players = g.playerIds.map(id => state.players.find(p => p.id === id)).filter(Boolean);
+    if (!players.length) return;
+
+    html += `<div class="mb-16">
+      <div class="flex items-center gap-8 mb-8">
+        <strong style="font-size:.9rem">${g.name}</strong>
+        <span class="badge ${players.length === state.config.playersPerGroup ? 'badge-success' : 'badge-warning'}">${players.length}/${state.config.playersPerGroup}</span>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>#</th><th>Name</th><th>Group</th><th>Leader</th><th></th></tr></thead>
+          <tbody>
+            ${players.map((p, i) => {
+              const isLeader = g.leaderId === p.id;
+              return `<tr>
+                <td>${i + 1}</td>
+                <td><input type="text" value="${p.name}" style="border:none;background:transparent;padding:2px 4px;width:180px"
+                  onchange="renamePlayer('${p.id}',this.value)"></td>
+                <td><span class="group-chip" onclick="showGroupPicker('${p.id}')" title="Click to reassign">${g.name}</span></td>
+                <td><span class="leader-toggle ${isLeader ? 'active' : ''}" onclick="toggleLeader('${p.id}','${g.id}')" title="${isLeader ? 'Remove as leader' : 'Set as leader'}">&#9733;</span></td>
+                <td><button class="btn btn-sm btn-icon" onclick="removePlayer('${p.id}')" title="Remove">&times;</button></td>
+              </tr>`;
+            }).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>`;
+  });
+
+  // Unassigned players
+  if (unassigned.length) {
+    html += `<div class="mb-16">
+      <div class="flex items-center gap-8 mb-8">
+        <strong style="font-size:.9rem;color:var(--text-dim)">Unassigned</strong>
+        <span class="badge badge-warning">${unassigned.length}</span>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>#</th><th>Name</th><th>Group</th><th>Leader</th><th></th></tr></thead>
+          <tbody>
+            ${unassigned.map((p, i) => `<tr>
+              <td>${i + 1}</td>
+              <td><input type="text" value="${p.name}" style="border:none;background:transparent;padding:2px 4px;width:180px"
+                onchange="renamePlayer('${p.id}',this.value)"></td>
+              <td><span class="group-chip unassigned" onclick="showGroupPicker('${p.id}')" title="Click to assign">Assign</span></td>
+              <td></td>
+              <td><button class="btn btn-sm btn-icon" onclick="removePlayer('${p.id}')" title="Remove">&times;</button></td>
+            </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>`;
+  }
+
+  return html;
+}
+
+function renderGroupSummary() {
+  if (!state.groups.length) ensureGroups();
+  let html = '<div class="grid-auto">';
+  state.groups.forEach(g => {
+    const players = g.playerIds.map(id => state.players.find(p => p.id === id)).filter(Boolean);
+    const leader = g.leaderId ? state.players.find(p => p.id === g.leaderId) : null;
+    html += `<div style="background:var(--bg-input);border-radius:var(--radius);padding:12px 16px">
+      <div class="flex justify-between items-center mb-8">
+        <strong>${g.name}</strong>
+        <span class="badge ${players.length === state.config.playersPerGroup ? 'badge-success' : 'badge-warning'}">${players.length}/${state.config.playersPerGroup}</span>
+      </div>
+      <div style="font-size:.8rem;color:var(--text-dim);margin-bottom:6px">
+        Leader: ${leader ? `<span style="color:var(--warning)">&#9733; ${leader.name}</span>` : '<span style="color:var(--danger)">None</span>'}
+      </div>
+      <div class="players-grid">
+        ${players.map(p => `<span class="player-chip ${g.leaderId === p.id ? 'leader' : ''}">${p.name}</span>`).join('')}
+      </div>
+    </div>`;
+  });
+  html += '</div>';
+  return html;
+}
+
+function ensureGroups() {
+  const needed = state.config.numGroups;
+  while (state.groups.length < needed) {
+    const letter = String.fromCharCode(65 + state.groups.length);
+    state.groups.push({ id: uid(), name: `Group ${letter}`, playerIds: [], court: `Court ${state.groups.length + 1}`, leaderId: null });
+  }
+  while (state.groups.length > needed) state.groups.pop();
+  saveState();
+}
+
+function updateConfig(key, val) {
+  state.config[key] = val;
+  if (key === 'numGroups') ensureGroups();
+  saveState();
+  renderSetup();
+}
+
+function addPlayerFromForm() {
+  const first = document.getElementById('addFirstName').value.trim();
+  const last = document.getElementById('addLastName').value.trim();
+  const groupId = document.getElementById('addGroup').value;
+  const isLeader = document.getElementById('addLeader').checked;
+
+  if (!first) { toast('First name is required', 'error'); return; }
+  const fullName = last ? `${first} ${last}` : first;
+
+  if (state.players.find(p => p.name.toLowerCase() === fullName.toLowerCase())) {
+    toast('Player already exists', 'error'); return;
+  }
+
+  const id = uid();
+  state.players.push({ id, name: fullName });
+
+  if (groupId) {
+    const group = state.groups.find(g => g.id === groupId);
+    if (group) {
+      if (group.playerIds.length >= state.config.playersPerGroup) {
+        toast(`${group.name} is full`, 'error');
+      } else {
+        group.playerIds.push(id);
+        if (isLeader) group.leaderId = id;
+      }
+    }
+  }
+
+  saveState();
+  renderSetup();
+  // Re-focus the first name input for quick consecutive adds
+  setTimeout(() => {
+    const fn = document.getElementById('addFirstName');
+    if (fn) { fn.value = ''; fn.focus(); }
+    const ln = document.getElementById('addLastName');
+    if (ln) ln.value = '';
+    const cb = document.getElementById('addLeader');
+    if (cb) cb.checked = false;
+  }, 50);
+  toast(`Added ${fullName}`, 'success');
+}
+
+function showBulkAdd() {
+  openModal(`
+    <h2>Bulk Add Players</h2>
+    <p style="font-size:.8rem;color:var(--text-dim);margin-bottom:12px">One name per line (first last)</p>
+    <textarea id="bulkNames" rows="10" placeholder="Makarand Sharma\nPuneet Singh\n..."></textarea>
+    <div class="btn-group mt-16">
+      <button class="btn btn-primary" onclick="bulkAddPlayers()">Add All</button>
+      <button class="btn" onclick="closeModal()">Cancel</button>
+    </div>
+  `);
+}
+
+function bulkAddPlayers() {
+  const text = document.getElementById('bulkNames').value;
+  const names = text.split('\n').map(s => s.trim()).filter(Boolean);
+  let added = 0;
+  names.forEach(name => {
+    if (!state.players.find(p => p.name.toLowerCase() === name.toLowerCase())) {
+      state.players.push({ id: uid(), name });
+      added++;
+    }
+  });
+  saveState();
+  closeModal();
+  renderSetup();
+  toast(`Added ${added} players`, 'success');
+}
+
+function removePlayer(id) {
+  state.players = state.players.filter(p => p.id !== id);
+  state.groups.forEach(g => {
+    g.playerIds = g.playerIds.filter(pid => pid !== id);
+    if (g.leaderId === id) g.leaderId = null;
+  });
+  saveState();
+  renderSetup();
+}
+
+function renamePlayer(id, name) {
+  const p = state.players.find(p => p.id === id);
+  if (p) p.name = name.trim();
+  saveState();
+}
+
+function showGroupPicker(playerId) {
+  const currentGroup = state.groups.find(g => g.playerIds.includes(playerId));
+  const options = state.groups.map(g => {
+    const count = g.playerIds.length;
+    const full = count >= state.config.playersPerGroup && (!currentGroup || currentGroup.id !== g.id);
+    const isCurrent = currentGroup && currentGroup.id === g.id;
+    return `<button class="btn ${isCurrent ? 'btn-primary' : ''} mb-8 w-full"
+      ${full ? 'disabled' : ''}
+      onclick="assignPlayerToGroup('${playerId}','${g.id}')">
+      ${g.name} (${count}/${state.config.playersPerGroup})${isCurrent ? ' — current' : ''}${full ? ' — full' : ''}
+    </button>`;
+  }).join('');
+
+  openModal(`
+    <h2>Assign ${getPlayerName(playerId)} to Group</h2>
+    <div class="mt-16">${options}</div>
+    <button class="btn mt-8 w-full" onclick="assignPlayerToGroup('${playerId}','')">Unassign</button>
+    <button class="btn mt-16" onclick="closeModal()">Cancel</button>
+  `);
+}
+
+function assignPlayerToGroup(playerId, groupId) {
+  // Remove from all groups first
+  state.groups.forEach(g => {
+    if (g.leaderId === playerId) g.leaderId = null;
+    g.playerIds = g.playerIds.filter(id => id !== playerId);
+  });
+  // Add to new group
+  if (groupId) {
+    const group = state.groups.find(g => g.id === groupId);
+    if (group && group.playerIds.length < state.config.playersPerGroup) {
+      group.playerIds.push(playerId);
+    }
+  }
+  saveState();
+  closeModal();
+  renderSetup();
+}
+
+function toggleLeader(playerId, groupId) {
+  const group = state.groups.find(g => g.id === groupId);
+  if (!group) return;
+  // Toggle: if already leader, remove; otherwise set (replacing any existing leader)
+  group.leaderId = group.leaderId === playerId ? null : playerId;
+  saveState();
+  renderSetup();
+}
+
+function autoAssignGroups() {
+  ensureGroups();
+  state.groups.forEach(g => { g.playerIds = []; g.leaderId = null; });
+  const shuffled = [...state.players].sort(() => Math.random() - .5);
+  shuffled.forEach((p, i) => {
+    const gi = i % state.config.numGroups;
+    if (state.groups[gi].playerIds.length < state.config.playersPerGroup) {
+      state.groups[gi].playerIds.push(p.id);
+    }
+  });
+  saveState();
+  renderSetup();
+  toast('Players assigned randomly', 'success');
+}
+
+function startTournament() {
+  const c = state.config;
+  // Validate
+  const totalNeeded = c.numGroups * c.playersPerGroup;
+  if (state.players.length < totalNeeded) { toast(`Need ${totalNeeded} players`, 'error'); return; }
+  const allAssigned = state.groups.every(g => g.playerIds.length === c.playersPerGroup);
+  if (!allAssigned) {
+    // Auto-assign remaining
+    autoAssignGroups();
+  }
+
+  // Generate QR1 matches
+  const matches = [];
+  state.groups.forEach(g => {
+    const schedule = generateDoublesSchedule(g.playerIds, c.matchesPerPlayer);
+    schedule.forEach((m, i) => {
+      matches.push({
+        id: uid(),
+        groupId: g.id,
+        matchNum: i + 1,
+        court: g.court,
+        team1: { playerIds: m.team1, score: null },
+        team2: { playerIds: m.team2, score: null },
+        status: 'scheduled',
+        winner: null
+      });
+    });
+  });
+
+  state.rounds.qr1 = { status: 'in_progress', matches, standings: [] };
+  saveState();
+  renderAll();
+  switchTab('qr1');
+  toast('QR1 schedule generated!', 'success');
+}
+
+// ═══════════════════════════════════════════════════════════════
+// RENDERING - QR1 TAB
+// ═══════════════════════════════════════════════════════════════
+
+function renderQR1() {
+  const qr1 = state.rounds.qr1;
+  if (qr1.status === 'not_started') {
+    document.getElementById('tab-qr1').innerHTML = '<div class="empty-state"><p>Complete setup first</p></div>';
+    return;
+  }
+
+  let html = '';
+
+  // Sub-tabs for groups
+  const activeGroup = state._activeQR1Group || state.groups[0]?.id;
+  html += '<div class="sub-tabs">';
+  html += `<div class="sub-tab ${!state._activeQR1Group || state._activeQR1Group === 'all' ? 'active' : ''}" onclick="state._activeQR1Group='all';renderQR1()">All Groups</div>`;
+  state.groups.forEach(g => {
+    const gMatches = qr1.matches.filter(m => m.groupId === g.id);
+    const completed = gMatches.filter(m => m.status === 'completed').length;
+    html += `<div class="sub-tab ${state._activeQR1Group === g.id ? 'active' : ''}" onclick="state._activeQR1Group='${g.id}';renderQR1()">
+      ${g.name} <span class="tab-badge">${completed}/${gMatches.length}</span>
+    </div>`;
+  });
+  html += '</div>';
+
+  const groupsToShow = state._activeQR1Group && state._activeQR1Group !== 'all'
+    ? state.groups.filter(g => g.id === state._activeQR1Group)
+    : state.groups;
+
+  groupsToShow.forEach(g => {
+    const gMatches = qr1.matches.filter(m => m.groupId === g.id);
+    const completed = gMatches.filter(m => m.status === 'completed').length;
+    const leader = g.leaderId ? getPlayerName(g.leaderId) : 'None';
+
+    // Standings
+    const standings = sortStandingsQR1(computeStandings(g.playerIds, gMatches, state.config));
+
+    html += `<div class="card">
+      <div class="card-header">
+        <div>
+          <div class="card-title">${g.name}</div>
+          <div class="card-subtitle">Leader: ${leader} | ${completed}/${gMatches.length} matches</div>
+        </div>
+        <div class="progress-bar" style="width:100px"><div class="fill" style="width:${gMatches.length ? (completed/gMatches.length*100) : 0}%"></div></div>
+      </div>
+
+      <!-- Standings -->
+      <div class="table-wrap mb-16">
+        <table>
+          <thead><tr>
+            <th>Rank</th><th>Player</th><th>W</th><th>L</th><th>PF</th><th>PA</th>
+            <th>Win Diff</th><th>Loss Diff</th><th>Weighted Pts</th>
+            ${qr1.status === 'completed' ? '<th>Pool</th>' : ''}
+          </tr></thead>
+          <tbody>
+            ${standings.map((s, i) => {
+              const isTop = i < state.config.advanceTop;
+              return `<tr class="${isTop ? 'champion-row' : 'consolation-row'}">
+                <td><strong>${i + 1}</strong></td>
+                <td>${getPlayerName(s.playerId)}</td>
+                <td>${s.wins}</td><td>${s.losses}</td>
+                <td>${s.totalPointsScored}</td><td>${s.totalPointsConceded}</td>
+                <td style="color:var(--success)">+${s.winPointDiff}</td>
+                <td style="color:var(--danger)">-${s.lossPointDiff}</td>
+                <td><strong>${s.weightedPoints}</strong></td>
+                ${qr1.status === 'completed' ? `<td><span class="badge ${isTop ? 'badge-champion' : 'badge-consolation'}">${isTop ? 'Champion' : 'Consolation'}</span></td>` : ''}
+              </tr>`;
+            }).join('')}
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Matches -->
+      <div class="card-title mb-8" style="font-size:.85rem">Matches</div>
+      ${gMatches.map(m => renderMatchRow(m, 'qr1')).join('')}
+    </div>`;
+  });
+
+  // Advance button
+  const allCompleted = qr1.matches.every(m => m.status === 'completed');
+  if (qr1.status === 'in_progress') {
+    html += `<div class="text-center mt-16">
+      <button class="btn btn-success" onclick="advanceToQR2()" ${!allCompleted ? 'disabled' : ''}>
+        Complete QR1 & Advance to QR2
+      </button>
+      ${!allCompleted ? '<div style="color:var(--text-dim);font-size:.8rem;margin-top:6px">Complete all matches first</div>' : ''}
+    </div>`;
+  }
+
+  document.getElementById('tab-qr1').innerHTML = html;
+  updateBadge('qr1', qr1.matches);
+}
+
+function renderMatchRow(m, round) {
+  const isCompleted = m.status === 'completed';
+
+  if (isCompleted) {
+    const s1 = m.team1.score, s2 = m.team2.score;
+    const t1Won = s1 > s2;
+    return `<div class="match-card completed">
+      <div class="match-num">#${m.matchNum}</div>
+      <div class="team"><div class="team-names">${getPlayerNames(m.team1.playerIds)}</div></div>
+      <div class="vs">vs</div>
+      <div class="team" style="text-align:right"><div class="team-names">${getPlayerNames(m.team2.playerIds)}</div></div>
+      <span class="score-display">
+        <span class="${t1Won ? 'winner-score' : 'loser-score'}">${s1}</span>
+        <span style="color:var(--text-dim)"> - </span>
+        <span class="${!t1Won ? 'winner-score' : 'loser-score'}">${s2}</span>
+      </span>
+      <div class="match-meta">
+        ${m.court ? `<span class="match-meta-tag" title="Court">Ct ${m.court}</span>` : ''}
+        ${m.birdies ? `<span class="match-meta-tag" title="Birdies">${m.birdies} birdie${m.birdies > 1 ? 's' : ''}</span>` : ''}
+      </div>
+      <button class="btn btn-sm btn-icon" onclick="editScore('${m.id}','${round}')" title="Edit">&#9998;</button>
+    </div>`;
+  }
+
+  return `<div class="match-card">
+    <div class="match-num">#${m.matchNum}</div>
+    <div class="team"><div class="team-names">${getPlayerNames(m.team1.playerIds)}</div></div>
+    <div class="vs">vs</div>
+    <div class="team" style="text-align:right"><div class="team-names">${getPlayerNames(m.team2.playerIds)}</div></div>
+    <div class="match-entry">
+      <div class="match-entry-row">
+        <div class="score-inline">
+          <input type="number" min="0" max="${state.config.deuceCap}" id="s1_${m.id}" placeholder="0">
+          <span class="dash">-</span>
+          <input type="number" min="0" max="${state.config.deuceCap}" id="s2_${m.id}" placeholder="0">
+        </div>
+        <input type="text" id="ct_${m.id}" value="${m.court || ''}" placeholder="Ct#"
+          style="width:48px;text-align:center;padding:4px;font-size:.75rem" title="Court #">
+        <input type="number" id="bd_${m.id}" value="${m.birdies || ''}" placeholder="Birdies" min="0" max="20"
+          style="width:64px;text-align:center;padding:4px;font-size:.75rem" title="Birdies used">
+        <button class="btn btn-sm btn-primary" onclick="submitScore('${m.id}','${round}')">OK</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+function submitScore(matchId, round) {
+  const s1 = parseInt(document.getElementById(`s1_${matchId}`).value);
+  const s2 = parseInt(document.getElementById(`s2_${matchId}`).value);
+
+  if (!validateScore(s1, s2, state.config)) {
+    toast('Invalid score. Check rules (win by 2, cap at ' + state.config.deuceCap + ')', 'error');
+    return;
+  }
+
+  const ctEl = document.getElementById(`ct_${matchId}`);
+  const bdEl = document.getElementById(`bd_${matchId}`);
+
+  const matches = state.rounds[round].matches;
+  const m = matches.find(m => m.id === matchId);
+  if (!m) return;
+  m.team1.score = s1;
+  m.team2.score = s2;
+  m.status = 'completed';
+  m.winner = s1 > s2 ? 'team1' : 'team2';
+  if (ctEl) m.court = ctEl.value.trim();
+  if (bdEl && bdEl.value) m.birdies = parseInt(bdEl.value) || 0;
+  saveState();
+
+  if (round === 'qr1') renderQR1();
+  else if (round === 'qr2') renderQR2();
+  else if (round === 'semis') renderSemis();
+}
+
+function editScore(matchId, round) {
+  const matches = state.rounds[round].matches;
+  const m = matches.find(m => m.id === matchId);
+  if (!m) return;
+  m.status = 'scheduled';
+  m.team1.score = null;
+  m.team2.score = null;
+  m.winner = null;
+  saveState();
+
+  if (round === 'qr1') renderQR1();
+  else if (round === 'qr2') renderQR2();
+  else if (round === 'semis') renderSemis();
+}
+
+function updateBadge(round, matches) {
+  const el = document.getElementById(`${round}Badge`);
+  if (!el || !matches.length) return;
+  const done = matches.filter(m => m.status === 'completed').length;
+  el.textContent = Math.round(done / matches.length * 100) + '%';
+}
+
+// ═══════════════════════════════════════════════════════════════
+// ADVANCEMENT - QR1 → QR2
+// ═══════════════════════════════════════════════════════════════
+
+function advanceToQR2() {
+  if (!confirm('Advance to Qualifier Round 2? Rankings will be locked.')) return;
+
+  const c = state.config;
+  const champion = [];
+  const consolation = [];
+  const qr1Rankings = {};
+  let globalRank = 1;
+
+  state.groups.forEach(g => {
+    const gMatches = state.rounds.qr1.matches.filter(m => m.groupId === g.id);
+    const standings = sortStandingsQR1(computeStandings(g.playerIds, gMatches, c));
+    standings.forEach((s, i) => {
+      qr1Rankings[s.playerId] = globalRank++;
+      if (i < c.advanceTop) champion.push(s.playerId);
+      else consolation.push(s.playerId);
+    });
+  });
+
+  state.rounds.qr1.status = 'completed';
+  state._qr1Rankings = qr1Rankings;
+
+  // Generate QR2 matches for both pools
+  const champMatches = generateDoublesSchedule(champion, c.matchesPerPlayer);
+  const consolMatches = generateDoublesSchedule(consolation, c.matchesPerPlayer);
+
+  const matches = [];
+  champMatches.forEach((m, i) => {
+    matches.push({
+      id: uid(), pool: 'champion', matchNum: i + 1, court: '',
+      team1: { playerIds: m.team1, score: null },
+      team2: { playerIds: m.team2, score: null },
+      status: 'scheduled', winner: null
+    });
+  });
+  consolMatches.forEach((m, i) => {
+    matches.push({
+      id: uid(), pool: 'consolation', matchNum: i + 1, court: '',
+      team1: { playerIds: m.team1, score: null },
+      team2: { playerIds: m.team2, score: null },
+      status: 'scheduled', winner: null
+    });
+  });
+
+  state.rounds.qr2 = { status: 'in_progress', pools: { champion, consolation }, matches, standings: [] };
+  saveState();
+  renderAll();
+  switchTab('qr2');
+  toast('Advanced to QR2!', 'success');
+}
+
+// ═══════════════════════════════════════════════════════════════
+// RENDERING - QR2 TAB
+// ═══════════════════════════════════════════════════════════════
+
+function renderQR2() {
+  const qr2 = state.rounds.qr2;
+  if (qr2.status === 'not_started') {
+    document.getElementById('tab-qr2').innerHTML = '<div class="empty-state"><p>Complete QR1 first</p></div>';
+    return;
+  }
+
+  const activePool = state._activeQR2Pool || 'champion';
+
+  let html = '<div class="sub-tabs">';
+  ['champion', 'consolation'].forEach(pool => {
+    const pMatches = qr2.matches.filter(m => m.pool === pool);
+    const completed = pMatches.filter(m => m.status === 'completed').length;
+    html += `<div class="sub-tab ${activePool === pool ? 'active' : ''}"
+      onclick="state._activeQR2Pool='${pool}';renderQR2()">
+      ${pool === 'champion' ? 'Champion Pool' : 'Consolation Pool'}
+      <span class="tab-badge">${completed}/${pMatches.length}</span>
+    </div>`;
+  });
+  html += '</div>';
+
+  const poolIds = qr2.pools[activePool];
+  const poolMatches = qr2.matches.filter(m => m.pool === activePool);
+  const completed = poolMatches.filter(m => m.status === 'completed').length;
+
+  // Standings
+  const qr1Rankings = state._qr1Rankings || {};
+  const standings = sortStandingsQR2(computeStandings(poolIds, poolMatches, state.config), qr1Rankings);
+
+  html += `<div class="card">
+    <div class="card-header">
+      <div>
+        <div class="card-title">${activePool === 'champion' ? 'Champion' : 'Consolation'} Pool</div>
+        <div class="card-subtitle">${poolIds.length} players | ${completed}/${poolMatches.length} matches</div>
+      </div>
+      <div class="progress-bar" style="width:100px"><div class="fill" style="width:${poolMatches.length ? (completed/poolMatches.length*100) : 0}%"></div></div>
+    </div>
+
+    <div class="table-wrap mb-16">
+      <table>
+        <thead><tr>
+          <th>Rank</th><th>Player</th><th>W</th><th>L</th><th>PF</th><th>PA</th>
+          <th>Win Diff</th><th>Loss Diff</th><th>Weighted Pts</th><th>QR1 Rank</th>
+          ${qr2.status === 'completed' ? '<th>Status</th>' : ''}
+        </tr></thead>
+        <tbody>
+          ${standings.map((s, i) => {
+            const advances = i < state.config.semiFinalSlots;
+            return `<tr class="${advances ? 'highlight' : ''}">
+              <td><strong>${i + 1}</strong></td>
+              <td>${getPlayerName(s.playerId)}</td>
+              <td>${s.wins}</td><td>${s.losses}</td>
+              <td>${s.totalPointsScored}</td><td>${s.totalPointsConceded}</td>
+              <td style="color:var(--success)">+${s.winPointDiff}</td>
+              <td style="color:var(--danger)">-${s.lossPointDiff}</td>
+              <td><strong>${s.weightedPoints}</strong></td>
+              <td>${qr1Rankings[s.playerId] || '—'}</td>
+              ${qr2.status === 'completed' ? `<td>${advances ? '<span class="badge badge-success">Advances</span>' : ''}</td>` : ''}
+            </tr>`;
+          }).join('')}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="card-title mb-8" style="font-size:.85rem">Matches</div>
+    ${poolMatches.map(m => renderMatchRow(m, 'qr2')).join('')}
+  </div>`;
+
+  // Advance button
+  const allCompleted = qr2.matches.every(m => m.status === 'completed');
+  if (qr2.status === 'in_progress') {
+    html += `<div class="text-center mt-16">
+      <button class="btn btn-success" onclick="advanceToSemis()" ${!allCompleted ? 'disabled' : ''}>
+        Complete QR2 & Advance to Semi-Finals
+      </button>
+      ${!allCompleted ? '<div style="color:var(--text-dim);font-size:.8rem;margin-top:6px">Complete all matches first</div>' : ''}
+    </div>`;
+  }
+
+  document.getElementById('tab-qr2').innerHTML = html;
+  updateBadge('qr2', qr2.matches);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// ADVANCEMENT - QR2 → SEMI-FINALS
+// ═══════════════════════════════════════════════════════════════
+
+function advanceToSemis() {
+  if (!confirm('Advance to Semi-Finals?')) return;
+
+  const c = state.config;
+  const qr2 = state.rounds.qr2;
+  const qr1Rankings = state._qr1Rankings || {};
+  const matches = [];
+
+  ['champion', 'consolation'].forEach(pool => {
+    const poolIds = qr2.pools[pool];
+    const poolMatches = qr2.matches.filter(m => m.pool === pool);
+    const standings = sortStandingsQR2(computeStandings(poolIds, poolMatches, c), qr1Rankings);
+    const top = standings.slice(0, c.semiFinalSlots);
+
+    const prefix = pool === 'champion' ? 'A' : 'B';
+    // Match 1: 1st & 8th vs 4th & 5th
+    matches.push({
+      id: uid(), pool, label: `Match ${prefix}1`, matchNum: 1,
+      team1: { playerIds: [top[0].playerId, top[7].playerId], score: null },
+      team2: { playerIds: [top[3].playerId, top[4].playerId], score: null },
+      status: 'scheduled', winner: null
+    });
+    // Match 2: 2nd & 7th vs 3rd & 6th
+    matches.push({
+      id: uid(), pool, label: `Match ${prefix}2`, matchNum: 2,
+      team1: { playerIds: [top[1].playerId, top[6].playerId], score: null },
+      team2: { playerIds: [top[2].playerId, top[5].playerId], score: null },
+      status: 'scheduled', winner: null
+    });
+  });
+
+  qr2.status = 'completed';
+  state.rounds.semis = { status: 'in_progress', matches };
+  saveState();
+  renderAll();
+  switchTab('semis');
+  toast('Semi-Finals set up!', 'success');
+}
+
+// ═══════════════════════════════════════════════════════════════
+// RENDERING - SEMI-FINALS TAB
+// ═══════════════════════════════════════════════════════════════
+
+function renderSemis() {
+  const semis = state.rounds.semis;
+  if (semis.status === 'not_started') {
+    document.getElementById('tab-semis').innerHTML = '<div class="empty-state"><p>Complete QR2 first</p></div>';
+    return;
+  }
+
+  let html = '<div class="grid-2">';
+  ['champion', 'consolation'].forEach(pool => {
+    const pMatches = semis.matches.filter(m => m.pool === pool);
+    html += `<div>
+      <h3 class="mb-8" style="color:var(--${pool === 'champion' ? 'champion' : 'consolation'})">${pool === 'champion' ? 'Champion Pool' : 'Consolation Pool'}</h3>
+      ${pMatches.map(m => `
+        <div class="card">
+          <div class="card-title mb-8">${m.label}</div>
+          ${renderMatchRow(m, 'semis')}
+        </div>
+      `).join('')}
+    </div>`;
+  });
+  html += '</div>';
+
+  const allCompleted = semis.matches.every(m => m.status === 'completed');
+  if (semis.status === 'in_progress') {
+    html += `<div class="text-center mt-16">
+      <button class="btn btn-success" onclick="advanceToFinals()" ${!allCompleted ? 'disabled' : ''}>
+        Complete Semi-Finals & Advance to Finals
+      </button>
+    </div>`;
+  }
+
+  document.getElementById('tab-semis').innerHTML = html;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// ADVANCEMENT - SEMIS → FINALS
+// ═══════════════════════════════════════════════════════════════
+
+function advanceToFinals() {
+  if (!confirm('Advance to Finals?')) return;
+
+  const semis = state.rounds.semis;
+  const matches = [];
+
+  ['champion', 'consolation'].forEach(pool => {
+    const pMatches = semis.matches.filter(m => m.pool === pool);
+    const winners = pMatches.map(m => {
+      const winTeam = m.winner === 'team1' ? m.team1 : m.team2;
+      return winTeam.playerIds;
+    });
+
+    matches.push({
+      id: uid(), pool, label: pool === 'champion' ? 'Champion Final' : 'Consolation Final',
+      team1: { playerIds: winners[0], gamesWon: 0 },
+      team2: { playerIds: winners[1], gamesWon: 0 },
+      games: [
+        { team1Score: null, team2Score: null, winner: null },
+        { team1Score: null, team2Score: null, winner: null },
+        { team1Score: null, team2Score: null, winner: null }
+      ],
+      status: 'in_progress', winner: null
+    });
+  });
+
+  semis.status = 'completed';
+  state.rounds.finals = { status: 'in_progress', matches };
+  saveState();
+  renderAll();
+  switchTab('finals');
+  toast('Finals set up!', 'success');
+}
+
+// ═══════════════════════════════════════════════════════════════
+// RENDERING - FINALS TAB
+// ═══════════════════════════════════════════════════════════════
+
+function renderFinals() {
+  const finals = state.rounds.finals;
+  if (finals.status === 'not_started') {
+    document.getElementById('tab-finals').innerHTML = '<div class="empty-state"><p>Complete Semi-Finals first</p></div>';
+    return;
+  }
+
+  let html = '<div class="grid-2">';
+  finals.matches.forEach(fm => {
+    const isChamp = fm.pool === 'champion';
+    html += `<div class="finals-card" style="border-color:var(--${isChamp ? 'champion' : 'consolation'})">
+      <div class="pool-label" style="color:var(--${isChamp ? 'champion' : 'consolation'})">${fm.label}</div>
+      <div class="teams-display">
+        <div class="team-block">
+          <div class="names">${getPlayerNames(fm.team1.playerIds)}</div>
+          <div style="font-size:1.5rem;font-weight:700;color:${fm.team1.gamesWon >= 2 ? 'var(--success)' : 'var(--text)'}">${fm.team1.gamesWon}</div>
+        </div>
+        <div class="vs" style="font-size:1rem">VS</div>
+        <div class="team-block">
+          <div class="names">${getPlayerNames(fm.team2.playerIds)}</div>
+          <div style="font-size:1.5rem;font-weight:700;color:${fm.team2.gamesWon >= 2 ? 'var(--success)' : 'var(--text)'}">${fm.team2.gamesWon}</div>
+        </div>
+      </div>
+      <div class="game-scores">
+        ${fm.games.map((g, gi) => {
+          const played = g.team1Score !== null;
+          const needed = gi === 0 || gi === 1 || (fm.team1.gamesWon === 1 && fm.team2.gamesWon === 1);
+          if (!needed && !played) return '';
+          return `<div class="game-score">
+            <div class="game-label">Game ${gi + 1}</div>
+            ${played
+              ? `<div class="scores">
+                  <span class="${g.winner === 'team1' ? 'winner-score' : 'loser-score'}">${g.team1Score}</span>
+                  <span style="color:var(--text-dim)"> - </span>
+                  <span class="${g.winner === 'team2' ? 'winner-score' : 'loser-score'}">${g.team2Score}</span>
+                  <div><button class="btn btn-sm mt-8" onclick="editFinalGame('${fm.id}',${gi})">Edit</button></div>
+                </div>`
+              : `<div class="score-inline" style="justify-content:center">
+                  <input type="number" min="0" max="${state.config.deuceCap}" id="fg1_${fm.id}_${gi}">
+                  <span class="dash">-</span>
+                  <input type="number" min="0" max="${state.config.deuceCap}" id="fg2_${fm.id}_${gi}">
+                  <button class="btn btn-sm btn-primary" onclick="submitFinalGame('${fm.id}',${gi})">OK</button>
+                </div>`
+            }
+          </div>`;
+        }).join('')}
+      </div>
+      ${fm.winner ? `<div class="winner-banner"><h3>Winner: ${getPlayerNames(fm[fm.winner].playerIds)}</h3></div>` : ''}
+    </div>`;
+  });
+  html += '</div>';
+
+  document.getElementById('tab-finals').innerHTML = html;
+}
+
+function submitFinalGame(matchId, gameIdx) {
+  const fm = state.rounds.finals.matches.find(m => m.id === matchId);
+  if (!fm) return;
+  const s1 = parseInt(document.getElementById(`fg1_${matchId}_${gameIdx}`).value);
+  const s2 = parseInt(document.getElementById(`fg2_${matchId}_${gameIdx}`).value);
+
+  if (!validateScore(s1, s2, state.config)) {
+    toast('Invalid score', 'error');
+    return;
+  }
+
+  const game = fm.games[gameIdx];
+  game.team1Score = s1;
+  game.team2Score = s2;
+  game.winner = s1 > s2 ? 'team1' : 'team2';
+
+  // Recalculate games won
+  fm.team1.gamesWon = fm.games.filter(g => g.winner === 'team1').length;
+  fm.team2.gamesWon = fm.games.filter(g => g.winner === 'team2').length;
+
+  if (fm.team1.gamesWon >= 2) { fm.winner = 'team1'; fm.status = 'completed'; }
+  else if (fm.team2.gamesWon >= 2) { fm.winner = 'team2'; fm.status = 'completed'; }
+
+  if (state.rounds.finals.matches.every(m => m.status === 'completed')) {
+    state.rounds.finals.status = 'completed';
+  }
+
+  saveState();
+  renderFinals();
+  renderDashboard();
+
+  if (fm.winner) toast(`${fm.label} won by ${getPlayerNames(fm[fm.winner].playerIds)}!`, 'success');
+}
+
+function editFinalGame(matchId, gameIdx) {
+  const fm = state.rounds.finals.matches.find(m => m.id === matchId);
+  if (!fm) return;
+  fm.games[gameIdx] = { team1Score: null, team2Score: null, winner: null };
+  fm.team1.gamesWon = fm.games.filter(g => g.winner === 'team1').length;
+  fm.team2.gamesWon = fm.games.filter(g => g.winner === 'team2').length;
+  fm.winner = null;
+  fm.status = 'in_progress';
+  state.rounds.finals.status = 'in_progress';
+  saveState();
+  renderFinals();
+}
+
+// ═══════════════════════════════════════════════════════════════
+// RENDERING - DASHBOARD TAB
+// ═══════════════════════════════════════════════════════════════
+
+function renderDashboard() {
+  const totalPlayers = state.players.length;
+  const allMatches = [
+    ...state.rounds.qr1.matches,
+    ...state.rounds.qr2.matches,
+    ...state.rounds.semis.matches
+  ];
+  const totalMatches = allMatches.length;
+  const completedMatches = allMatches.filter(m => m.status === 'completed').length;
+
+  const roundStatus = (r) => {
+    if (r.status === 'completed') return '<span class="badge badge-success">Completed</span>';
+    if (r.status === 'in_progress') return '<span class="badge badge-warning">In Progress</span>';
+    return '<span class="badge" style="background:var(--border);color:var(--text-dim)">Pending</span>';
+  };
+
+  let html = `
+    <div class="grid-auto" style="grid-template-columns:repeat(auto-fit,minmax(160px,1fr))">
+      <div class="stat-card">
+        <div class="stat-value">${totalPlayers}</div>
+        <div class="stat-label">Players</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">${state.config.numGroups}</div>
+        <div class="stat-label">Groups</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">${completedMatches}/${totalMatches || '—'}</div>
+        <div class="stat-label">Matches Played</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">${totalMatches ? Math.round(completedMatches/totalMatches*100) : 0}%</div>
+        <div class="stat-label">Progress</div>
+      </div>
+    </div>
+
+    <div class="card mt-16">
+      <div class="card-title mb-16">Tournament Progress</div>
+      <table>
+        <thead><tr><th>Round</th><th>Status</th><th>Matches</th><th>Details</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><strong>Qualifier Round 1</strong></td>
+            <td>${roundStatus(state.rounds.qr1)}</td>
+            <td>${state.rounds.qr1.matches.filter(m=>m.status==='completed').length}/${state.rounds.qr1.matches.length}</td>
+            <td>${state.config.numGroups} groups of ${state.config.playersPerGroup}</td>
+          </tr>
+          <tr>
+            <td><strong>Qualifier Round 2</strong></td>
+            <td>${roundStatus(state.rounds.qr2)}</td>
+            <td>${state.rounds.qr2.matches.filter(m=>m.status==='completed').length}/${state.rounds.qr2.matches.length}</td>
+            <td>Champion + Consolation pools</td>
+          </tr>
+          <tr>
+            <td><strong>Semi-Finals</strong></td>
+            <td>${roundStatus(state.rounds.semis)}</td>
+            <td>${state.rounds.semis.matches.filter(m=>m.status==='completed').length}/${state.rounds.semis.matches.length}</td>
+            <td>4 matches (2 per pool)</td>
+          </tr>
+          <tr>
+            <td><strong>Finals</strong></td>
+            <td>${roundStatus(state.rounds.finals)}</td>
+            <td>Best of 3</td>
+            <td>${state.rounds.finals.matches.map(m => m.winner ? `${m.label}: ${getPlayerNames(m[m.winner].playerIds)}` : m.label).join(' | ')}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="card mt-16">
+      <div class="card-title mb-8">Weighted Points Formula</div>
+      <div style="font-family:var(--font-mono);font-size:.85rem;padding:12px;background:var(--bg-input);border-radius:var(--radius)">
+        WP = (Wins × ${state.config.winWeight}) + Σ(point diff of winning matches) − Σ(point diff of losing matches)
+      </div>
+      <div class="mt-8" style="font-size:.8rem;color:var(--text-dim)">
+        Games to ${state.config.pointsToWin} points | Deuce cap: ${state.config.deuceCap} |
+        Top ${state.config.advanceTop} per group advance to Champion Pool |
+        Top ${state.config.semiFinalSlots} per pool advance to Semi-Finals
+      </div>
+    </div>
+  `;
+
+  // Show champions if finals completed
+  if (state.rounds.finals.status === 'completed') {
+    html += '<div class="card mt-16" style="border-color:var(--champion)">';
+    html += '<div class="card-title mb-16" style="color:var(--champion);text-align:center;font-size:1.3rem">Tournament Champions</div>';
+    state.rounds.finals.matches.forEach(fm => {
+      if (fm.winner) {
+        html += `<div class="winner-banner mb-8">
+          <div style="font-size:.75rem;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;color:var(--text-dim)">${fm.label}</div>
+          <h3>${getPlayerNames(fm[fm.winner].playerIds)}</h3>
+          <div style="font-size:.85rem;margin-top:4px">Games: ${fm.team1.gamesWon} - ${fm.team2.gamesWon}</div>
+        </div>`;
+      }
+    });
+    html += '</div>';
+  }
+
+  document.getElementById('tab-dashboard').innerHTML = html;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// TAB NAVIGATION
+// ═══════════════════════════════════════════════════════════════
+
+function switchTab(tabId) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tabId));
+  document.querySelectorAll('.tab-content').forEach(tc => tc.classList.toggle('active', tc.id === `tab-${tabId}`));
+}
+
+document.getElementById('mainTabs').addEventListener('click', (e) => {
+  const tab = e.target.closest('.tab');
+  if (!tab) return;
+  switchTab(tab.dataset.tab);
+});
+
+function updateHeader() {
+  document.getElementById('headerTitle').textContent = state.config.tournamentName || 'Badminton Tournament Manager';
+  const statusEl = document.getElementById('headerStatus');
+  if (state.rounds.finals.status === 'completed') { statusEl.textContent = 'Completed'; statusEl.className = 'badge badge-success'; }
+  else if (state.rounds.finals.status === 'in_progress') { statusEl.textContent = 'Finals'; statusEl.className = 'badge badge-champion'; }
+  else if (state.rounds.semis.status === 'in_progress') { statusEl.textContent = 'Semi-Finals'; statusEl.className = 'badge badge-warning'; }
+  else if (state.rounds.qr2.status === 'in_progress') { statusEl.textContent = 'Qualifier R2'; statusEl.className = 'badge badge-primary'; }
+  else if (state.rounds.qr1.status === 'in_progress') { statusEl.textContent = 'Qualifier R1'; statusEl.className = 'badge badge-primary'; }
+  else { statusEl.textContent = 'Setup'; statusEl.className = 'badge badge-primary'; }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// INITIALIZATION
+// ═══════════════════════════════════════════════════════════════
+
+function renderAll() {
+  renderSetup();
+  renderQR1();
+  renderQR2();
+  renderSemis();
+  renderFinals();
+  renderDashboard();
+  updateHeader();
+}
+
+// Pre-populate default players if empty (matching the tournament sheet)
+if (state.players.length === 0) {
+  const defaultPlayers = [
+    'Makarand','Puneet','Rijo','Sunil','Siddarth',
+    'Syed','Srini','Mayur','Harsha','Tensingh',
+    'Madhu','Arjun','Ajay','Vikram','Abhijat',
+    'Nishant','Saurav','John','Pankaj','Nishtha',
+    'Nikhil','Prakaash','Amit S','Chakresh','Amit J',
+    'Sabbir','Siri','Arun','Vijay','Kishor'
+  ];
+  defaultPlayers.forEach(name => state.players.push({ id: uid(), name }));
+
+  // Pre-assign to groups matching the sheet
+  ensureGroups();
+  const groupNames = ['Group A','Group B','Group C','Group D','Group E'];
+  const groupPlayers = [
+    ['Makarand','Syed','Madhu','Nishant','Nikhil','Sabbir'],
+    ['Puneet','Srini','Arjun','Saurav','Prakaash','Siri'],
+    ['Rijo','Mayur','Ajay','John','Amit S','Arun'],
+    ['Sunil','Harsha','Vikram','Pankaj','Chakresh','Vijay'],
+    ['Siddarth','Tensingh','Abhijat','Nishtha','Amit J','Kishor']
+  ];
+
+  const groupLeaders = ['Nishant','Prakaash','Mayur','Pankaj','Abhijat'];
+  const courts = ['Court 8','Court 9','Court 10','Court 11','Court 12'];
+
+  groupPlayers.forEach((names, gi) => {
+    state.groups[gi].playerIds = names.map(n => state.players.find(p => p.name === n)?.id).filter(Boolean);
+    const leader = state.players.find(p => p.name === groupLeaders[gi]);
+    if (leader) state.groups[gi].leaderId = leader.id;
+    state.groups[gi].court = courts[gi];
+  });
+
+  saveState();
+}
+
+renderAll();
+</script>
+</body>
+</html>
