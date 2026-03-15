@@ -1859,7 +1859,6 @@ function renderPlayersByGroup() {
       <div class="flex items-center gap-8 mb-8">
         <strong style="font-size:.9rem;color:var(--text-heading)">${g.name}</strong>
         <span class="badge ${players.length === state.config.playersPerGroup ? 'badge-success' : 'badge-warning'}">${players.length}/${state.config.playersPerGroup}</span>
-        ${g.court ? `<span class="meta-tag">${g.court}</span>` : ''}
       </div>
       <div class="table-wrap">
         <table>
@@ -1922,7 +1921,6 @@ function renderGroupSummary() {
       </div>
       <div style="font-size:.78rem;color:var(--text-muted);margin-bottom:8px">
         Leader: ${leader ? `<span style="color:var(--champion)">\u2605 ${leader.name}</span>` : '<span style="color:var(--danger)">None</span>'}
-        ${g.court ? ` \u00b7 ${g.court}` : ''}
       </div>
       <div class="players-grid">
         ${players.map(p => `<span class="player-chip ${g.leaderId === p.id ? 'is-leader' : ''}">${p.name}</span>`).join('')}
@@ -1937,7 +1935,7 @@ function ensureGroups() {
   const needed = state.config.numGroups;
   while (state.groups.length < needed) {
     const letter = String.fromCharCode(65 + state.groups.length);
-    state.groups.push({ id: uid(), name: `Group ${letter}`, playerIds: [], court: `Court ${state.groups.length + 1}`, leaderId: null });
+    state.groups.push({ id: uid(), name: `Group ${letter}`, playerIds: [], court: '', leaderId: null });
   }
   while (state.groups.length > needed) state.groups.pop();
   saveState();
