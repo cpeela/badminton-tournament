@@ -8,9 +8,9 @@
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
 <style>
-/* ══════════════════════════════════════════
+/* ==========================================
    DESIGN TOKENS
-   ══════════════════════════════════════════ */
+   ========================================== */
 :root {
   /* Surface palette — warm navy */
   --bg-deep: #0c1018;
@@ -77,9 +77,9 @@
   --font-mono: 'DM Mono', 'Menlo', monospace;
 }
 
-/* ══════════════════════════════════════════
+/* ==========================================
    RESET & BASE
-   ══════════════════════════════════════════ */
+   ========================================== */
 *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 html { font-size: 15px; -webkit-font-smoothing: antialiased; }
 body {
@@ -102,9 +102,9 @@ body {
   outline-offset: 2px;
 }
 
-/* ══════════════════════════════════════════
+/* ==========================================
    HEADER
-   ══════════════════════════════════════════ */
+   ========================================== */
 .header {
   background: var(--bg);
   border-bottom: 1px solid var(--border);
@@ -142,9 +142,9 @@ body {
 }
 .header-actions { display: flex; gap: 8px; align-items: center; }
 
-/* ══════════════════════════════════════════
+/* ==========================================
    BADGE
-   ══════════════════════════════════════════ */
+   ========================================== */
 .badge {
   display: inline-flex;
   align-items: center;
@@ -164,9 +164,9 @@ body {
 .badge-consolation { background: var(--consolation-bg); color: var(--consolation); }
 .badge-neutral { background: var(--bg-elevated); color: var(--text-secondary); }
 
-/* ══════════════════════════════════════════
+/* ==========================================
    TABS — proper ARIA
-   ══════════════════════════════════════════ */
+   ========================================== */
 .tabs {
   display: flex;
   background: var(--bg);
@@ -241,17 +241,17 @@ body {
   background: var(--primary-bg);
 }
 
-/* ══════════════════════════════════════════
+/* ==========================================
    LAYOUT
-   ══════════════════════════════════════════ */
+   ========================================== */
 .main { padding: 28px; max-width: 1440px; margin: 0 auto; }
 .tab-content { display: none; }
 .tab-content.active { display: block; animation: fadeIn .2s ease; }
 @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
 
-/* ══════════════════════════════════════════
+/* ==========================================
    CARDS
-   ══════════════════════════════════════════ */
+   ========================================== */
 .card {
   background: var(--bg-card);
   border: 1px solid var(--border);
@@ -288,9 +288,9 @@ body {
   margin-bottom: 12px;
 }
 
-/* ══════════════════════════════════════════
+/* ==========================================
    BUTTONS
-   ══════════════════════════════════════════ */
+   ========================================== */
 .btn {
   padding: 9px 18px;
   border: 1px solid var(--border);
@@ -329,9 +329,9 @@ body {
 .btn:disabled { opacity: .35; cursor: not-allowed; pointer-events: none; }
 .btn-group { display: flex; gap: 8px; flex-wrap: wrap; }
 
-/* ══════════════════════════════════════════
+/* ==========================================
    FORM ELEMENTS
-   ══════════════════════════════════════════ */
+   ========================================== */
 input, select, textarea {
   background: var(--bg-input);
   border: 1px solid var(--border);
@@ -368,9 +368,9 @@ label {
 .form-group-fixed { flex: 0 0 auto; }
 .form-inline { display: flex; align-items: center; gap: 8px; }
 
-/* ══════════════════════════════════════════
+/* ==========================================
    TABLES
-   ══════════════════════════════════════════ */
+   ========================================== */
 .table-wrap { overflow-x: auto; border-radius: var(--radius); }
 table { width: 100%; border-collapse: collapse; font-size: .82rem; }
 th, td { padding: 10px 14px; text-align: left; border-bottom: 1px solid var(--border); }
@@ -399,17 +399,17 @@ tr:last-child td { border-bottom: none; }
 .col-negative { color: var(--danger); }
 .col-strong { font-weight: 700; color: var(--text-heading); }
 
-/* ══════════════════════════════════════════
+/* ==========================================
    GRID LAYOUTS
-   ══════════════════════════════════════════ */
+   ========================================== */
 .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
 .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; }
 .grid-auto { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; }
 .grid-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 16px; }
 
-/* ══════════════════════════════════════════
+/* ==========================================
    MATCH CARDS — the core UX
-   ══════════════════════════════════════════ */
+   ========================================== */
 .match-card {
   background: var(--bg-card);
   border: 1px solid var(--border);
@@ -512,9 +512,9 @@ tr:last-child td { border-bottom: none; }
   font-weight: 500;
 }
 
-/* ══════════════════════════════════════════
+/* ==========================================
    PLAYER CHIPS
-   ══════════════════════════════════════════ */
+   ========================================== */
 .player-chip {
   display: inline-flex;
   align-items: center;
@@ -539,9 +539,9 @@ tr:last-child td { border-bottom: none; }
 }
 .player-chip .chip-remove:hover { color: var(--danger); }
 
-/* ══════════════════════════════════════════
+/* ==========================================
    GROUP CHIP (clickable)
-   ══════════════════════════════════════════ */
+   ========================================== */
 .group-chip {
   display: inline-block;
   padding: 4px 12px;
@@ -571,9 +571,9 @@ tr:last-child td { border-bottom: none; }
 .leader-toggle:hover { color: var(--champion); transform: scale(1.15); }
 .leader-toggle.active { color: var(--champion); }
 
-/* ══════════════════════════════════════════
+/* ==========================================
    PROGRESS BAR
-   ══════════════════════════════════════════ */
+   ========================================== */
 .progress-bar {
   height: 6px;
   background: var(--bg-elevated);
@@ -587,9 +587,9 @@ tr:last-child td { border-bottom: none; }
   transition: width .4s cubic-bezier(.4,0,.2,1);
 }
 
-/* ══════════════════════════════════════════
+/* ==========================================
    STAT CARDS
-   ══════════════════════════════════════════ */
+   ========================================== */
 .stat-card {
   background: var(--bg-card);
   border: 1px solid var(--border);
@@ -616,9 +616,9 @@ tr:last-child td { border-bottom: none; }
   margin-top: 4px;
 }
 
-/* ══════════════════════════════════════════
+/* ==========================================
    FINALS CARD
-   ══════════════════════════════════════════ */
+   ========================================== */
 .finals-card {
   background: var(--bg-card);
   border: 1px solid var(--border);
@@ -707,9 +707,9 @@ tr:last-child td { border-bottom: none; }
   font-weight: 700;
 }
 
-/* ══════════════════════════════════════════
+/* ==========================================
    MODAL
-   ══════════════════════════════════════════ */
+   ========================================== */
 .modal-overlay {
   display: none;
   position: fixed;
@@ -744,9 +744,9 @@ tr:last-child td { border-bottom: none; }
   margin-bottom: 18px;
 }
 
-/* ══════════════════════════════════════════
+/* ==========================================
    TOAST
-   ══════════════════════════════════════════ */
+   ========================================== */
 .toast-container {
   position: fixed;
   bottom: 24px;
@@ -774,9 +774,9 @@ tr:last-child td { border-bottom: none; }
 .toast.info { border-left: 3px solid var(--primary); }
 @keyframes toastIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
 
-/* ══════════════════════════════════════════
+/* ==========================================
    ALERT
-   ══════════════════════════════════════════ */
+   ========================================== */
 .alert {
   border-radius: var(--radius);
   padding: 12px 18px;
@@ -790,9 +790,9 @@ tr:last-child td { border-bottom: none; }
 .alert-warning { background: var(--warning-bg); border: 1px solid rgba(251,191,36,.2); color: var(--warning); }
 .alert-info { background: var(--primary-bg); border: 1px solid rgba(212,168,83,.2); color: var(--primary-text); }
 
-/* ══════════════════════════════════════════
+/* ==========================================
    EMPTY STATE
-   ══════════════════════════════════════════ */
+   ========================================== */
 .empty-state {
   text-align: center;
   padding: 48px 24px;
@@ -806,9 +806,9 @@ tr:last-child td { border-bottom: none; }
   line-height: 1.5;
 }
 
-/* ══════════════════════════════════════════
+/* ==========================================
    PLAYERS GRID (group summary)
-   ══════════════════════════════════════════ */
+   ========================================== */
 .players-grid {
   display: flex;
   flex-wrap: wrap;
@@ -825,9 +825,9 @@ tr:last-child td { border-bottom: none; }
   border: 1px solid var(--border);
 }
 
-/* ══════════════════════════════════════════
+/* ==========================================
    FORMULA BOX
-   ══════════════════════════════════════════ */
+   ========================================== */
 .formula-box {
   font-family: var(--font-mono);
   font-size: .84rem;
@@ -838,9 +838,9 @@ tr:last-child td { border-bottom: none; }
   color: var(--text-secondary);
 }
 
-/* ══════════════════════════════════════════
+/* ==========================================
    UTILITIES
-   ══════════════════════════════════════════ */
+   ========================================== */
 .text-center { text-align: center; }
 .text-right { text-align: right; }
 .mt-4 { margin-top: 4px; }
@@ -867,28 +867,9 @@ tr:last-child td { border-bottom: none; }
 .flex-none { flex: none; }
 .hidden { display: none; }
 
-/* ══════════════════════════════════════════
-   RESPONSIVE
-   ══════════════════════════════════════════ */
-@media (max-width: 768px) {
-  .main { padding: 14px; }
-  .grid-2, .grid-3 { grid-template-columns: 1fr; }
-  .header { padding: 10px 14px; }
-  .tabs { padding: 0 10px; }
-  .card { padding: 16px; }
-  .match-card { flex-wrap: wrap; padding: 12px 14px; }
-  .match-teams { min-width: 100%; }
-  .score-entry { width: 100%; justify-content: center; }
-  .finals-card { padding: 18px; }
-  .teams-display { flex-direction: column; gap: 14px; }
-}
-
-/* ══════════════════════════════════════════
-   PRINT
-   ══════════════════════════════════════════ */
-/* ══════════════════════════════════════════
+/* ==========================================
    AUTH GATE
-   ══════════════════════════════════════════ */
+   ========================================== */
 .auth-gate {
   position: fixed;
   inset: 0;
@@ -1003,12 +984,151 @@ body.guest-mode .btn-danger { display: none !important; }
 .role-badge.admin { background: var(--success-bg); color: var(--success); }
 .role-badge.guest { background: var(--bg-elevated); color: var(--text-muted); }
 
+/* ==========================================
+   RESPONSIVE
+   ========================================== */
+@media (max-width: 768px) {
+  .main { padding: 14px; }
+  .grid-2, .grid-3 { grid-template-columns: 1fr; }
+  .header { padding: 10px 14px; }
+  .tabs { padding: 0 10px; }
+  .card { padding: 16px; }
+  .match-card { flex-wrap: wrap; padding: 12px 14px; }
+  .match-teams { min-width: 100%; }
+  .score-entry { width: 100%; justify-content: center; }
+  .finals-card { padding: 18px; }
+  .teams-display { flex-direction: column; gap: 14px; }
+}
+
 @media print {
   .header, .tabs, .btn, .score-entry, .header-actions, .toast-container, .auth-gate { display: none !important; }
   body { background: #fff; color: #111; }
   .card { border: 1px solid #ddd; break-inside: avoid; background: #fff; }
   .tab-content { display: block !important; }
   th { background: #f5f5f5; color: #333; }
+}
+</style>
+<style>
+/* MOBILE — phones portrait (480px and below) */
+@media (max-width: 480px) {
+  /* Header */
+  .header {
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 10px 12px;
+  }
+  .header h1 {
+    font-size: 0.88rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 160px;
+  }
+  .header-left { gap: 6px; flex-wrap: wrap; }
+  .header-brand { gap: 6px; }
+  .header-icon { width: 26px; height: 26px; font-size: 0.8rem; }
+  .header-actions {
+    width: 100%;
+    justify-content: flex-end;
+    gap: 6px;
+  }
+  .header-actions .btn-sm {
+    padding: 6px 10px;
+    font-size: 0.72rem;
+    min-height: 44px;
+  }
+  .badge, .role-badge { font-size: 0.62rem; padding: 2px 8px; }
+
+  /* Tabs */
+  .tabs {
+    padding: 0 8px;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .tabs::-webkit-scrollbar { display: none; }
+  .tab {
+    padding: 12px 14px;
+    font-size: 0.78rem;
+    min-height: 44px;
+  }
+  .tab-badge { font-size: 0.6rem; padding: 2px 5px; }
+
+  /* Main content */
+  .main { padding: 10px; }
+  .card { padding: 14px; }
+
+  /* Match cards */
+  .match-card {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+    padding: 12px;
+  }
+  .match-num { text-align: left; }
+  .match-teams { min-width: 100%; justify-content: center; }
+  .score-entry { width: 100%; justify-content: center; }
+  .score-input { width: 64px; min-height: 44px; }
+  .match-meta { width: 100%; justify-content: center; }
+  .meta-input { width: 50%; min-width: 0; min-height: 44px; }
+
+  /* Tables */
+  th, td { padding: 8px 6px; font-size: 0.75rem; }
+  .col-pf, .col-pa { display: none; }
+
+  /* Finals */
+  .finals-card { padding: 14px; }
+  .game-scores-row { flex-wrap: wrap; gap: 8px; }
+  .game-score-box { min-width: 80px; padding: 8px 12px; flex: 1; }
+  .team-block-names { font-size: 0.9rem; }
+  .team-block-score { font-size: 1.3rem; }
+  .winner-banner { padding: 14px; }
+
+  /* Auth gate */
+  .auth-card { padding: 24px 16px; width: 95%; }
+  .pin-digit { width: 46px; height: 54px; font-size: 1.3rem; }
+  .pin-input-group { gap: 8px; }
+  .auth-card h2 { font-size: 1.1rem; }
+  .auth-card p { font-size: .78rem; }
+
+  /* Forms */
+  .form-row { gap: 10px; }
+  .form-group { min-width: 120px; }
+  input[type="number"] { width: 100%; }
+
+  /* Touch targets */
+  .btn { min-height: 44px; }
+  .btn-sm { min-height: 44px; padding: 8px 14px; }
+  .btn-icon { min-height: 44px; min-width: 44px; }
+  .sub-tab { min-height: 44px; padding: 8px 14px; }
+  .leader-toggle { padding: 6px; min-width: 44px; min-height: 44px; display: inline-flex; align-items: center; justify-content: center; }
+  .group-chip { min-height: 44px; display: inline-flex; align-items: center; }
+
+  /* Stats grid */
+  .grid-stats { gap: 10px; }
+  .stat-card { padding: 14px 16px; }
+  .stat-value { font-size: 1.6rem; }
+  .grid-auto { grid-template-columns: 1fr; }
+
+  /* Toast */
+  .toast-container { left: 10px; right: 10px; bottom: 10px; }
+  .toast { font-size: 0.78rem; }
+
+  /* Modal */
+  .modal { padding: 18px; width: 95%; }
+}
+
+/* MOBILE — smallest phones (375px and below) */
+@media (max-width: 375px) {
+  .header h1 { font-size: 0.85rem; }
+  .header-actions .btn-sm { font-size: 0.68rem; padding: 6px 8px; }
+  .score-input { width: 56px; }
+  th, td { padding: 6px 4px; font-size: 0.72rem; }
+  .col-windiff, .col-lossdiff { display: none; }
+  .form-group { min-width: 100%; }
+  .form-row { gap: 8px; }
+  .stat-value { font-size: 1.4rem; }
+  .stat-card { padding: 12px; }
+  .grid-stats { gap: 8px; }
 }
 </style>
 </head>
@@ -1749,7 +1869,7 @@ function renderPlayersByGroup() {
               const isLeader = g.leaderId === p.id;
               return `<tr>
                 <td class="col-num">${i + 1}</td>
-                <td><input type="text" value="${p.name}" style="border:none;background:transparent;padding:2px 6px;width:200px;color:var(--text)"
+                <td><input type="text" value="${p.name}" style="border:none;background:transparent;padding:2px 6px;width:100%;max-width:200px;color:var(--text)"
                   onchange="renamePlayer('${p.id}',this.value)"></td>
                 <td><span class="group-chip" onclick="showGroupPicker('${p.id}')" title="Click to reassign">${g.name}</span></td>
                 <td class="text-center"><span class="leader-toggle ${isLeader ? 'active' : ''}" onclick="toggleLeader('${p.id}','${g.id}')" title="${isLeader ? 'Remove as leader' : 'Set as leader'}">&#9733;</span></td>
@@ -1774,7 +1894,7 @@ function renderPlayersByGroup() {
           <tbody>
             ${unassigned.map((p, i) => `<tr>
               <td class="col-num">${i + 1}</td>
-              <td><input type="text" value="${p.name}" style="border:none;background:transparent;padding:2px 6px;width:200px;color:var(--text)"
+              <td><input type="text" value="${p.name}" style="border:none;background:transparent;padding:2px 6px;width:100%;max-width:200px;color:var(--text)"
                 onchange="renamePlayer('${p.id}',this.value)"></td>
               <td><span class="group-chip unassigned" onclick="showGroupPicker('${p.id}')" title="Click to assign">Assign</span></td>
               <td></td>
@@ -2055,8 +2175,8 @@ function renderQR1() {
       <div class="table-wrap mb-20">
         <table>
           <thead><tr>
-            <th>Rank</th><th>Player</th><th>W</th><th>L</th><th>PF</th><th>PA</th>
-            <th>Win Diff</th><th>Loss Diff</th><th>WP</th>
+            <th>Rank</th><th>Player</th><th>W</th><th>L</th><th class="col-pf">PF</th><th class="col-pa">PA</th>
+            <th class="col-windiff">Win Diff</th><th class="col-lossdiff">Loss Diff</th><th>WP</th>
             ${qr1.status === 'completed' ? '<th>Pool</th>' : ''}
           </tr></thead>
           <tbody>
@@ -2066,9 +2186,9 @@ function renderQR1() {
                 <td class="col-num col-strong">${i + 1}</td>
                 <td>${getPlayerName(s.playerId)}</td>
                 <td class="col-num">${s.wins}</td><td class="col-num">${s.losses}</td>
-                <td class="col-num">${s.totalPointsScored}</td><td class="col-num">${s.totalPointsConceded}</td>
-                <td class="col-num col-positive">+${s.winPointDiff}</td>
-                <td class="col-num col-negative">-${s.lossPointDiff}</td>
+                <td class="col-num col-pf">${s.totalPointsScored}</td><td class="col-num col-pa">${s.totalPointsConceded}</td>
+                <td class="col-num col-positive col-windiff">+${s.winPointDiff}</td>
+                <td class="col-num col-negative col-lossdiff">-${s.lossPointDiff}</td>
                 <td class="col-num col-strong">${s.weightedPoints}</td>
                 ${qr1.status === 'completed' ? `<td><span class="badge ${isTop ? 'badge-champion' : 'badge-consolation'}">${isTop ? 'Champion' : 'Consolation'}</span></td>` : ''}
               </tr>`;
@@ -2302,8 +2422,8 @@ function renderQR2() {
     <div class="table-wrap mb-20">
       <table>
         <thead><tr>
-          <th>Rank</th><th>Player</th><th>W</th><th>L</th><th>PF</th><th>PA</th>
-          <th>Win Diff</th><th>Loss Diff</th><th>WP</th><th>QR1 Rank</th>
+          <th>Rank</th><th>Player</th><th>W</th><th>L</th><th class="col-pf">PF</th><th class="col-pa">PA</th>
+          <th class="col-windiff">Win Diff</th><th class="col-lossdiff">Loss Diff</th><th>WP</th><th>QR1 Rank</th>
           ${qr2.status === 'completed' ? '<th>Status</th>' : ''}
         </tr></thead>
         <tbody>
@@ -2313,9 +2433,9 @@ function renderQR2() {
               <td class="col-num col-strong">${i + 1}</td>
               <td>${getPlayerName(s.playerId)}</td>
               <td class="col-num">${s.wins}</td><td class="col-num">${s.losses}</td>
-              <td class="col-num">${s.totalPointsScored}</td><td class="col-num">${s.totalPointsConceded}</td>
-              <td class="col-num col-positive">+${s.winPointDiff}</td>
-              <td class="col-num col-negative">-${s.lossPointDiff}</td>
+              <td class="col-num col-pf">${s.totalPointsScored}</td><td class="col-num col-pa">${s.totalPointsConceded}</td>
+              <td class="col-num col-positive col-windiff">+${s.winPointDiff}</td>
+              <td class="col-num col-negative col-lossdiff">-${s.lossPointDiff}</td>
               <td class="col-num col-strong">${s.weightedPoints}</td>
               <td class="col-num">${qr1Rankings[s.playerId] || '\u2014'}</td>
               ${qr2.status === 'completed' ? `<td>${advances ? '<span class="badge badge-success">Advances</span>' : ''}</td>` : ''}
