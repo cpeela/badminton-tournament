@@ -972,6 +972,8 @@ body.guest-mode select { pointer-events: none; opacity: .6; }
 body.guest-mode .btn-primary,
 body.guest-mode .btn-success,
 body.guest-mode .btn-danger { display: none !important; }
+body.guest-mode .leader-toggle { pointer-events: none; cursor: default; }
+body.guest-mode .group-chip { pointer-events: none; cursor: default; }
 
 /* Guest badge in header */
 .role-badge {
@@ -984,6 +986,8 @@ body.guest-mode .btn-danger { display: none !important; }
 }
 .role-badge.admin { background: var(--success-bg); color: var(--success); }
 .role-badge.guest { background: var(--bg-elevated); color: var(--text-muted); }
+.logout-btn { font-size: .7rem; padding: 3px 10px; color: var(--text-muted); }
+.logout-btn:hover { color: var(--danger); }
 
 .sync-badge {
   padding: 3px 10px;
@@ -1200,6 +1204,7 @@ body.guest-mode .btn-danger { display: none !important; }
     </div>
     <span class="badge badge-primary" id="headerStatus">Setup</span>
     <span class="role-badge" id="roleBadge"></span>
+    <button class="btn btn-sm btn-ghost logout-btn" id="logoutBtn" onclick="logout()" style="display:none">Logout</button>
     <span class="sync-badge offline" id="syncBadge" style="display:none">Offline</span>
   </div>
   <div class="header-actions">
@@ -1223,7 +1228,7 @@ body.guest-mode .btn-danger { display: none !important; }
 
 <!-- MAIN CONTENT -->
 <main class="main">
-  <div class="tab-content active" id="tab-setup" role="tabpanel" aria-labelledby="tab-setup"></div>
+  <div class="tab-content" id="tab-setup" role="tabpanel" aria-labelledby="tab-setup"></div>
   <div class="tab-content" id="tab-qr1" role="tabpanel"></div>
   <div class="tab-content" id="tab-qr2" role="tabpanel"></div>
   <div class="tab-content" id="tab-semis" role="tabpanel"></div>
@@ -1323,6 +1328,9 @@ function setRole(role) {
   const badge = document.getElementById('roleBadge');
   badge.textContent = role === 'admin' ? 'Admin' : 'Guest';
   badge.className = 'role-badge ' + role;
+
+  // Show logout button
+  document.getElementById('logoutBtn').style.display = 'inline-flex';
 }
 
 // Check if already authenticated this session
@@ -1334,6 +1342,18 @@ function setRole(role) {
 })();
 
 function isAdmin() { return currentRole === 'admin'; }
+
+function logout() {
+  currentRole = null;
+  sessionStorage.removeItem(AUTH_SESSION_KEY);
+  document.body.classList.remove('guest-mode');
+  document.getElementById('logoutBtn').style.display = 'none';
+  document.getElementById('authGate').classList.remove('hidden');
+  document.querySelectorAll('.pin-digit').forEach(d => { d.value = ''; });
+  document.getElementById('authError').textContent = '';
+  document.querySelector('.pin-digit')?.focus();
+  renderAll();
+}
 
 // ═══════════════════════════════════════════════════════════════
 // SUPABASE REAL-TIME SYNC
@@ -1557,7 +1577,7 @@ window.addEventListener('offline', () => {
 });
 
 function shareTournament() {
-  const url = window.location.origin + window.location.pathname + '?t=' + TOURNAMENT_ID;
+  const url = window.location.origin + window.location.pathname + '?t=' + TOURNAMENT_ID + window.location.hash;
   if (navigator.clipboard && navigator.clipboard.writeText) {
     navigator.clipboard.writeText(url).then(() => {
       toast('Tournament link copied! Share with players to view live scores.', 'success');
@@ -1589,7 +1609,9 @@ function defaultConfig() {
     winWeight: 20,
     advanceTop: 3,
     semiFinalSlots: 8,
-    finalsFormat: 'bestOf3'
+    finalsFormat: 'bestOf3',
+    championPoolFormat: 'bestOf3',
+    consolationPoolFormat: 'single'
   };
 }
 
@@ -2021,6 +2043,20 @@ function renderSetup() {
           <label>Semi-Final Slots</label>
           <input type="number" min="4" max="16" value="${c.semiFinalSlots}" ${locked ? 'disabled' : ''} onchange="updateConfig('semiFinalSlots',+this.value)">
         </div>
+        <div class="form-group">
+          <label>Champion Pool Format</label>
+          <select ${locked ? 'disabled' : ''} onchange="updateConfig('championPoolFormat',this.value)">
+            <option value="bestOf3" ${c.championPoolFormat === 'bestOf3' ? 'selected' : ''}>Best of 3</option>
+            <option value="single" ${c.championPoolFormat === 'single' ? 'selected' : ''}>Single Game</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Consolation Pool Format</label>
+          <select ${locked ? 'disabled' : ''} onchange="updateConfig('consolationPoolFormat',this.value)">
+            <option value="bestOf3" ${c.consolationPoolFormat === 'bestOf3' ? 'selected' : ''}>Best of 3</option>
+            <option value="single" ${c.consolationPoolFormat === 'single' ? 'selected' : ''}>Single Game</option>
+          </select>
+        </div>
       </div>
       <div class="formula-box mt-12">
         Total: <strong>${totalPlayers}</strong> players \u00b7
@@ -2030,7 +2066,7 @@ function renderSetup() {
       </div>
     </div>`;
 
-  if (!locked) {
+  if (!locked && isAdmin()) {
     // ---- Add Player Card ----
     html += `
     <div class="card">
@@ -2040,8 +2076,8 @@ function renderSetup() {
           <div class="card-subtitle">${state.players.length} of ${totalPlayers} registered</div>
         </div>
         <div class="btn-group">
-          <button class="btn btn-sm" onclick="showBulkAdd()">Bulk Add</button>
-          <button class="btn btn-sm" onclick="autoAssignGroups()">Auto-Assign</button>
+          <button class="btn btn-sm admin-only" onclick="showBulkAdd()">Bulk Add</button>
+          <button class="btn btn-sm admin-only" onclick="autoAssignGroups()">Auto-Assign</button>
         </div>
       </div>
       <div class="form-row" style="align-items:flex-end">
@@ -2153,7 +2189,7 @@ function renderPlayersByGroup() {
                   onchange="renamePlayer('${p.id}',this.value)"></td>
                 <td><span class="group-chip" onclick="showGroupPicker('${p.id}')" title="Click to reassign">${g.name}</span></td>
                 <td class="text-center"><span class="leader-toggle ${isLeader ? 'active' : ''}" onclick="toggleLeader('${p.id}','${g.id}')" title="${isLeader ? 'Remove as leader' : 'Set as leader'}">&#9733;</span></td>
-                <td><button class="btn btn-sm btn-icon btn-ghost" onclick="removePlayer('${p.id}')" title="Remove">&times;</button></td>
+                <td><button class="btn btn-sm btn-icon btn-ghost admin-only" onclick="removePlayer('${p.id}')" title="Remove">&times;</button></td>
               </tr>`;
             }).join('')}
           </tbody>
@@ -2178,7 +2214,7 @@ function renderPlayersByGroup() {
                 onchange="renamePlayer('${p.id}',this.value)"></td>
               <td><span class="group-chip unassigned" onclick="showGroupPicker('${p.id}')" title="Click to assign">Assign</span></td>
               <td></td>
-              <td><button class="btn btn-sm btn-icon btn-ghost" onclick="removePlayer('${p.id}')" title="Remove">&times;</button></td>
+              <td><button class="btn btn-sm btn-icon btn-ghost admin-only" onclick="removePlayer('${p.id}')" title="Remove">&times;</button></td>
             </tr>`).join('')}
           </tbody>
         </table>
@@ -2271,6 +2307,7 @@ function addPlayerFromForm() {
 }
 
 function showBulkAdd() {
+  if (!isAdmin()) return;
   openModal(`
     <h2>Bulk Add Players</h2>
     <p style="font-size:.8rem;color:var(--text-secondary);margin-bottom:12px">One name per line (first last)</p>
@@ -2309,12 +2346,14 @@ function removePlayer(id) {
 }
 
 function renamePlayer(id, name) {
+  if (!isAdmin()) return;
   const p = state.players.find(p => p.id === id);
   if (p) p.name = name.trim();
   saveState();
 }
 
 function showGroupPicker(playerId) {
+  if (!isAdmin()) return;
   const currentGroup = state.groups.find(g => g.playerIds.includes(playerId));
   const options = state.groups.map(g => {
     const count = g.playerIds.length;
@@ -2352,6 +2391,7 @@ function assignPlayerToGroup(playerId, groupId) {
 }
 
 function toggleLeader(playerId, groupId) {
+  if (!isAdmin()) return;
   const group = state.groups.find(g => g.id === groupId);
   if (!group) return;
   group.leaderId = group.leaderId === playerId ? null : playerId;
@@ -2360,6 +2400,7 @@ function toggleLeader(playerId, groupId) {
 }
 
 function autoAssignGroups() {
+  if (!isAdmin()) return;
   ensureGroups();
   state.groups.forEach(g => { g.playerIds = []; g.leaderId = null; });
   const shuffled = [...state.players].sort(() => Math.random() - .5);
@@ -2523,7 +2564,7 @@ function renderMatchRow(m, round) {
         ${m.court ? `<span class="meta-tag">Ct ${m.court}</span>` : ''}
         ${m.birdies ? `<span class="meta-tag">${m.birdies} \uD83C\uDFF8</span>` : ''}
       </div>
-      <button class="btn btn-sm btn-icon btn-ghost" onclick="editScore('${m.id}','${round}')" title="Edit score">&#9998;</button>
+      <button class="btn btn-sm btn-icon btn-ghost admin-only" onclick="editScore('${m.id}','${round}')" title="Edit score">&#9998;</button>
     </div>`;
   }
 
@@ -2577,6 +2618,7 @@ function submitScore(matchId, round) {
 }
 
 function editScore(matchId, round) {
+  if (!isAdmin()) return;
   const matches = state.rounds[round].matches;
   const m = matches.find(m => m.id === matchId);
   if (!m) return;
@@ -2702,7 +2744,7 @@ function renderQR2() {
       <table>
         <thead><tr>
           <th>Rank</th><th>Player</th><th>W</th><th>L</th><th class="col-pf">PF</th><th class="col-pa">PA</th>
-          <th class="col-windiff">Win Diff</th><th class="col-lossdiff">Loss Diff</th><th>WP</th><th>QR1 Rank</th>
+          <th class="col-windiff">Win Diff</th><th class="col-lossdiff">Loss Diff</th><th>WP</th>
           ${qr2.status === 'completed' ? '<th>Status</th>' : ''}
         </tr></thead>
         <tbody>
@@ -2716,7 +2758,6 @@ function renderQR2() {
               <td class="col-num col-positive col-windiff">+${s.winPointDiff}</td>
               <td class="col-num col-negative col-lossdiff">-${s.lossPointDiff}</td>
               <td class="col-num col-strong">${s.weightedPoints}</td>
-              <td class="col-num">${qr1Rankings[s.playerId] || '\u2014'}</td>
               ${qr2.status === 'completed' ? `<td>${advances ? '<span class="badge badge-success">Advances</span>' : ''}</td>` : ''}
             </tr>`;
           }).join('')}
@@ -2787,6 +2828,154 @@ function advanceToSemis() {
 // RENDERING — SEMI-FINALS TAB
 // ═══════════════════════════════════════════════════════════════
 
+function setSemisFormat(pool, format) {
+  if (!isAdmin()) return;
+  const semis = state.rounds.semis;
+  if (!semis.poolFormats) semis.poolFormats = { champion: 'single', consolation: 'single' };
+  semis.poolFormats[pool] = format;
+
+  // Convert matches for this pool
+  semis.matches.filter(m => m.pool === pool).forEach(m => {
+    if (format === 'bestOf3' && !m.games) {
+      // Convert single → bestOf3: preserve existing score as game 1 if completed
+      if (m.status === 'completed') {
+        m.games = [
+          { team1Score: m.team1.score, team2Score: m.team2.score, winner: m.team1.score > m.team2.score ? 'team1' : 'team2' },
+          { team1Score: null, team2Score: null, winner: null },
+          { team1Score: null, team2Score: null, winner: null }
+        ];
+        m.team1.gamesWon = m.games[0].winner === 'team1' ? 1 : 0;
+        m.team2.gamesWon = m.games[0].winner === 'team2' ? 1 : 0;
+        m.status = 'in_progress';
+        m.winner = null;
+      } else {
+        m.games = [
+          { team1Score: null, team2Score: null, winner: null },
+          { team1Score: null, team2Score: null, winner: null },
+          { team1Score: null, team2Score: null, winner: null }
+        ];
+        m.team1.gamesWon = 0;
+        m.team2.gamesWon = 0;
+      }
+    } else if (format === 'single' && m.games) {
+      // Convert bestOf3 → single: use game 1 score if played
+      if (m.games[0] && m.games[0].team1Score !== null) {
+        m.team1.score = m.games[0].team1Score;
+        m.team2.score = m.games[0].team2Score;
+        m.winner = m.games[0].winner;
+        m.status = 'completed';
+      } else {
+        m.team1.score = null;
+        m.team2.score = null;
+        m.winner = null;
+        m.status = 'scheduled';
+      }
+      delete m.games;
+      delete m.team1.gamesWon;
+      delete m.team2.gamesWon;
+    }
+  });
+
+  saveState();
+  renderSemis();
+}
+
+function submitSemisGame(matchId, gameIdx) {
+  if (!isAdmin()) return;
+  const m = state.rounds.semis.matches.find(x => x.id === matchId);
+  if (!m) return;
+  const s1 = parseInt(document.getElementById('sg1_' + matchId + '_' + gameIdx).value);
+  const s2 = parseInt(document.getElementById('sg2_' + matchId + '_' + gameIdx).value);
+
+  if (!validateScore(s1, s2, state.config)) {
+    toast('Invalid score', 'error');
+    return;
+  }
+
+  const game = m.games[gameIdx];
+  game.team1Score = s1;
+  game.team2Score = s2;
+  game.winner = s1 > s2 ? 'team1' : 'team2';
+
+  m.team1.gamesWon = m.games.filter(g => g.winner === 'team1').length;
+  m.team2.gamesWon = m.games.filter(g => g.winner === 'team2').length;
+
+  if (m.team1.gamesWon >= 2) { m.winner = 'team1'; m.status = 'completed'; }
+  else if (m.team2.gamesWon >= 2) { m.winner = 'team2'; m.status = 'completed'; }
+
+  saveState();
+  renderSemis();
+  if (m.winner) toast(m.label + ' won by ' + getPlayerNames(m[m.winner].playerIds) + '!', 'success');
+}
+
+function editSemisGame(matchId, gameIdx) {
+  if (!isAdmin()) return;
+  const m = state.rounds.semis.matches.find(x => x.id === matchId);
+  if (!m || !m.games[gameIdx]) return;
+  const g = m.games[gameIdx];
+  g.team1Score = null;
+  g.team2Score = null;
+  g.winner = null;
+  m.team1.gamesWon = m.games.filter(x => x.winner === 'team1').length;
+  m.team2.gamesWon = m.games.filter(x => x.winner === 'team2').length;
+  m.winner = null;
+  m.status = 'in_progress';
+  saveState();
+  renderSemis();
+}
+
+function renderSemisMatchBo3(m, isChamp) {
+  const poolColor = isChamp ? 'champion' : 'consolation';
+  const c = state.config;
+  let html = '<div class="card">';
+  html += '<div class="card-section-title" style="color:var(--' + poolColor + ')">' + m.label + '</div>';
+  html += '<div style="font-size:.75rem;color:var(--text-muted);margin-bottom:6px">Best of 3 \u00b7 First to 2 games</div>';
+
+  html += '<div class="teams-display">';
+  html += '<div class="team-block"><div class="team-block-names">' + getPlayerNames(m.team1.playerIds) + '</div>';
+  html += '<div class="team-block-score" style="color:' + (m.team1.gamesWon >= 2 ? 'var(--success)' : 'var(--text)') + '">' + (m.team1.gamesWon || 0) + '</div></div>';
+  html += '<div class="vs-label" style="font-size:1.1rem">VS</div>';
+  html += '<div class="team-block"><div class="team-block-names">' + getPlayerNames(m.team2.playerIds) + '</div>';
+  html += '<div class="team-block-score" style="color:' + (m.team2.gamesWon >= 2 ? 'var(--success)' : 'var(--text)') + '">' + (m.team2.gamesWon || 0) + '</div></div>';
+  html += '</div>';
+
+  html += '<div class="game-scores-row">';
+  m.games.forEach(function(g, gi) {
+    const played = g.team1Score !== null;
+    const needed = gi === 0 || gi === 1 || (m.team1.gamesWon === 1 && m.team2.gamesWon === 1);
+    if (!needed && !played) return;
+    html += '<div class="game-score-box"><div class="game-label">Game ' + (gi + 1) + '</div>';
+    if (played) {
+      html += '<div class="game-scores-text">';
+      html += '<span class="' + (g.winner === 'team1' ? 'score-winner' : 'score-loser') + '">' + g.team1Score + '</span>';
+      html += '<span class="score-dash"> \u2013 </span>';
+      html += '<span class="' + (g.winner === 'team2' ? 'score-winner' : 'score-loser') + '">' + g.team2Score + '</span>';
+      html += '</div>';
+      html += '<button class="btn btn-sm btn-ghost mt-8 admin-only" onclick="editSemisGame(\'' + m.id + '\',' + gi + ')">Edit</button>';
+    } else {
+      html += '<div class="score-entry" style="justify-content:center">';
+      html += '<input type="number" class="score-input" min="0" max="' + c.deuceCap + '" id="sg1_' + m.id + '_' + gi + '">';
+      html += '<span class="score-separator">\u2013</span>';
+      html += '<input type="number" class="score-input" min="0" max="' + c.deuceCap + '" id="sg2_' + m.id + '_' + gi + '">';
+      html += '<button class="btn btn-sm btn-primary" onclick="submitSemisGame(\'' + m.id + '\',' + gi + ')">OK</button>';
+      html += '</div>';
+    }
+    html += '</div>';
+  });
+  html += '</div>';
+
+  if (m.winner) {
+    html += '<div class="winner-banner mt-16">';
+    html += '<div style="font-size:.7rem;text-transform:uppercase;letter-spacing:.1em;color:var(--text-muted);margin-bottom:4px">Winner</div>';
+    html += '<h3>\uD83C\uDFC6 ' + getPlayerNames(m[m.winner].playerIds) + '</h3>';
+    html += '<div style="font-size:.85rem;margin-top:6px;color:var(--text-secondary)">Games: ' + m.team1.gamesWon + ' \u2013 ' + m.team2.gamesWon + '</div>';
+    html += '</div>';
+  }
+
+  html += '</div>';
+  return html;
+}
+
 function renderSemis() {
   const semis = state.rounds.semis;
   if (semis.status === 'not_started') {
@@ -2794,23 +2983,28 @@ function renderSemis() {
     return;
   }
 
+  if (!semis.poolFormats) semis.poolFormats = { champion: 'single', consolation: 'single' };
+
   let html = '<div class="grid-2">';
   ['champion', 'consolation'].forEach(pool => {
     const isChamp = pool === 'champion';
     const pMatches = semis.matches.filter(m => m.pool === pool);
+    const fmt = semis.poolFormats[pool];
     html += `<div>
       <h3 class="mb-12" style="font-family:var(--font-display);color:var(--${isChamp ? 'champion' : 'consolation'})">
         ${isChamp ? '\uD83C\uDFC6 Champion Pool' : '\uD83E\uDD48 Consolation Pool'}
       </h3>
-      <div class="card-subtitle mb-16" style="font-size:.78rem">
-        ${isChamp ? '1st+8th vs 4th+5th \u00b7 2nd+7th vs 3rd+6th' : '1st+8th vs 4th+5th \u00b7 2nd+7th vs 3rd+6th'}
+      <div class="flex items-center gap-8 mb-16">
+        <span class="card-subtitle" style="font-size:.78rem">1st+8th vs 4th+5th \u00b7 2nd+7th vs 3rd+6th</span>
+        <select class="meta-input admin-only" style="width:auto;font-size:.75rem;padding:3px 8px" onchange="setSemisFormat('${pool}',this.value)">
+          <option value="single" ${fmt === 'single' ? 'selected' : ''}>Single Game</option>
+          <option value="bestOf3" ${fmt === 'bestOf3' ? 'selected' : ''}>Best of 3</option>
+        </select>
       </div>
-      ${pMatches.map(m => `
-        <div class="card">
-          <div class="card-section-title" style="color:var(--${isChamp ? 'champion' : 'consolation'})">${m.label}</div>
-          ${renderMatchRow(m, 'semis')}
-        </div>
-      `).join('')}
+      ${pMatches.map(m => {
+        if (fmt === 'bestOf3') return renderSemisMatchBo3(m, isChamp);
+        return '<div class="card"><div class="card-section-title" style="color:var(--' + (isChamp ? 'champion' : 'consolation') + ')">' + m.label + '</div>' + renderMatchRow(m, 'semis') + '</div>';
+      }).join('')}
     </div>`;
   });
   html += '</div>';
@@ -2844,15 +3038,17 @@ function advanceToFinals() {
       return winTeam.playerIds;
     });
 
+    const formatKey = pool === 'champion' ? 'championPoolFormat' : 'consolationPoolFormat';
+    const format = state.config[formatKey] || 'bestOf3';
+    const numGames = format === 'bestOf3' ? 3 : 1;
+    const games = [];
+    for (let i = 0; i < numGames; i++) games.push({ team1Score: null, team2Score: null, winner: null });
+
     matches.push({
-      id: uid(), pool, label: pool === 'champion' ? 'Champion Final' : 'Consolation Final',
+      id: uid(), pool, format, label: pool === 'champion' ? 'Champion Final' : 'Consolation Final',
       team1: { playerIds: winners[0], gamesWon: 0 },
       team2: { playerIds: winners[1], gamesWon: 0 },
-      games: [
-        { team1Score: null, team2Score: null, winner: null },
-        { team1Score: null, team2Score: null, winner: null },
-        { team1Score: null, team2Score: null, winner: null }
-      ],
+      games,
       status: 'in_progress', winner: null
     });
   });
@@ -2883,7 +3079,7 @@ function renderFinals() {
 
     html += `<div class="finals-card" style="border-color:var(--${poolColor})">
       <div class="pool-label" style="color:var(--${poolColor})">${fm.label}</div>
-      <div style="font-size:.75rem;color:var(--text-muted);margin-bottom:6px">Best of 3 \u00b7 First to 2 games</div>
+      <div style="font-size:.75rem;color:var(--text-muted);margin-bottom:6px">${fm.format === 'single' ? 'Single Game' : 'Best of 3 \u00b7 First to 2 games'}</div>
 
       <div class="teams-display">
         <div class="team-block">
@@ -2900,7 +3096,8 @@ function renderFinals() {
       <div class="game-scores-row">
         ${fm.games.map((g, gi) => {
           const played = g.team1Score !== null;
-          const needed = gi === 0 || gi === 1 || (fm.team1.gamesWon === 1 && fm.team2.gamesWon === 1);
+          const isSingle = fm.format === 'single';
+          const needed = isSingle ? gi === 0 : (gi === 0 || gi === 1 || (fm.team1.gamesWon === 1 && fm.team2.gamesWon === 1));
           if (!needed && !played) return '';
           return `<div class="game-score-box">
             <div class="game-label">Game ${gi + 1}</div>
@@ -2910,7 +3107,7 @@ function renderFinals() {
                   <span class="score-dash"> \u2013 </span>
                   <span class="${g.winner === 'team2' ? 'score-winner' : 'score-loser'}">${g.team2Score}</span>
                 </div>
-                <button class="btn btn-sm btn-ghost mt-8" onclick="editFinalGame('${fm.id}',${gi})">Edit</button>`
+                <button class="btn btn-sm btn-ghost mt-8 admin-only" onclick="editFinalGame('${fm.id}',${gi})">Edit</button>`
               : `<div class="score-entry" style="justify-content:center">
                   <input type="number" class="score-input" min="0" max="${state.config.deuceCap}" id="fg1_${fm.id}_${gi}">
                   <span class="score-separator">\u2013</span>
@@ -2925,7 +3122,7 @@ function renderFinals() {
       ${fm.winner ? `<div class="winner-banner mt-16">
         <div style="font-size:.7rem;text-transform:uppercase;letter-spacing:.1em;color:var(--text-muted);margin-bottom:4px">Winner</div>
         <h3>\uD83C\uDFC6 ${getPlayerNames(fm[fm.winner].playerIds)}</h3>
-        <div style="font-size:.85rem;margin-top:6px;color:var(--text-secondary)">Games: ${fm.team1.gamesWon} \u2013 ${fm.team2.gamesWon}</div>
+        <div style="font-size:.85rem;margin-top:6px;color:var(--text-secondary)">${fm.format === 'single' ? 'Score: ' + fm.games[0].team1Score + ' \u2013 ' + fm.games[0].team2Score : 'Games: ' + fm.team1.gamesWon + ' \u2013 ' + fm.team2.gamesWon}</div>
       </div>` : ''}
     </div>`;
   });
@@ -2953,8 +3150,9 @@ function submitFinalGame(matchId, gameIdx) {
   fm.team1.gamesWon = fm.games.filter(g => g.winner === 'team1').length;
   fm.team2.gamesWon = fm.games.filter(g => g.winner === 'team2').length;
 
-  if (fm.team1.gamesWon >= 2) { fm.winner = 'team1'; fm.status = 'completed'; }
-  else if (fm.team2.gamesWon >= 2) { fm.winner = 'team2'; fm.status = 'completed'; }
+  const winsNeeded = fm.format === 'single' ? 1 : 2;
+  if (fm.team1.gamesWon >= winsNeeded) { fm.winner = 'team1'; fm.status = 'completed'; }
+  else if (fm.team2.gamesWon >= winsNeeded) { fm.winner = 'team2'; fm.status = 'completed'; }
 
   if (state.rounds.finals.matches.every(m => m.status === 'completed')) {
     state.rounds.finals.status = 'completed';
@@ -2968,6 +3166,7 @@ function submitFinalGame(matchId, gameIdx) {
 }
 
 function editFinalGame(matchId, gameIdx) {
+  if (!isAdmin()) return;
   const fm = state.rounds.finals.matches.find(m => m.id === matchId);
   if (!fm) return;
   fm.games[gameIdx] = { team1Score: null, team2Score: null, winner: null };
@@ -3097,7 +3296,17 @@ function renderDashboard() {
 // TAB NAVIGATION (ARIA-compliant)
 // ═══════════════════════════════════════════════════════════════
 
+const VALID_PAGES = ['setup', 'qr1', 'qr2', 'semis', 'finals', 'dashboard'];
+
 function switchTab(tabId) {
+  if (VALID_PAGES.includes(tabId)) {
+    window.location.hash = tabId;
+  }
+}
+
+function applyRoute() {
+  const hash = window.location.hash.replace('#', '');
+  const tabId = VALID_PAGES.includes(hash) ? hash : 'setup';
   document.querySelectorAll('.tab').forEach(t => {
     const isActive = t.dataset.tab === tabId;
     t.setAttribute('aria-selected', isActive);
@@ -3105,6 +3314,8 @@ function switchTab(tabId) {
   });
   document.querySelectorAll('.tab-content').forEach(tc => tc.classList.toggle('active', tc.id === `tab-${tabId}`));
 }
+
+window.addEventListener('hashchange', applyRoute);
 
 document.getElementById('mainTabs').addEventListener('click', (e) => {
   const tab = e.target.closest('.tab');
@@ -3190,6 +3401,7 @@ if (state.players.length === 0) {
 }
 
 renderAll();
+applyRoute();
 initSupabase(); // async — boots from localStorage first, then syncs with Supabase
 </script>
 </body>

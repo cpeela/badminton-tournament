@@ -14,7 +14,9 @@ npx serve -l 8080
 # Open http://localhost:8080/tournament-v2.html
 ```
 
-No build tools, no dependencies (except SheetJS CDN for Excel import). Just a single HTML file.
+No build tools, no dependencies (except SheetJS and Supabase CDNs). Just a single HTML file.
+
+**Page routing**: Use hash URLs to link directly to any page — e.g. `#qr1`, `#dashboard`.
 
 ---
 
@@ -32,8 +34,9 @@ No build tools, no dependencies (except SheetJS CDN for Excel import). Just a si
 | **JS: Utils** | 1382–1515 | `uid()`, `getPlayerName()`, `toast()`, player/group CRUD, group picker modal |
 | **JS: Core Logic** | 1515–1670 | `validateScore()`, `generateDoublesSchedule()`, `computeStandings()` |
 | **JS: Renderers** | 1674–2800 | `renderSetup()`, `renderQR1()`, `renderQR2()`, `renderSemis()`, `renderFinals()`, `renderDashboard()` |
-| **JS: Navigation** | 2800–2860 | Tab switching (ARIA-compliant keyboard nav) |
-| **JS: Init** | 2860–2916 | Default player seeding, `renderAll()` |
+| **JS: Supabase Sync** | ~1350–1570 | Real-time sync, conflict resolution, offline fallback |
+| **JS: Navigation** | ~3100–3150 | Hash-based page routing (ARIA-compliant keyboard nav) |
+| **JS: Init** | ~3160–3220 | Default player seeding, `renderAll()`, `applyRoute()` |
 
 ### Why single-file?
 - Zero-deploy friction (GitHub Pages serves `index.html`)
@@ -46,8 +49,10 @@ No build tools, no dependencies (except SheetJS CDN for Excel import). Just a si
 ## Tournament Flow
 
 ```
-Setup → Qualifier R1 → Qualifier R2 → Semi-Finals → Finals → Dashboard
+Setup (#setup) → Qualifier R1 (#qr1) → Qualifier R2 (#qr2) → Semi-Finals (#semis) → Finals (#finals) → Dashboard (#dashboard)
 ```
+
+Each page is a hash route — shareable, bookmarkable, with browser back/forward navigation.
 
 ### 1. Setup
 - 30 players, 5 groups of 6
@@ -66,13 +71,14 @@ Setup → Qualifier R1 → Qualifier R2 → Semi-Finals → Finals → Dashboard
 - Top `semiFinalSlots` (default: 8) advance to semis
 
 ### 4. Semi-Finals
-- 8 players, seeded 1v8, 2v7, 3v6, 4v5
-- Single elimination doubles matches
+- 8 players per pool, seeded 1v8, 2v7, 3v6, 4v5
+- Per-pool format toggle: **Single Game** or **Best of 3** (admin chooses at runtime, not setup)
+- Switching format mid-tournament preserves existing scores
 - Winners advance to finals
 
 ### 5. Finals
 - 4 remaining players: 2 matches (Champion Final + Consolation Final)
-- Best-of-3 format with per-game score entry
+- Per-pool format configured in Setup: **Single Game** or **Best of 3** (`championPoolFormat`, `consolationPoolFormat`)
 
 ### 6. Dashboard
 - Summary stats, top performers, tournament progress
@@ -107,9 +113,16 @@ Setup → Qualifier R1 → Qualifier R2 → Semi-Finals → Finals → Dashboard
 | **Admin** (PIN: `2025`) | Full CRUD: score entry, config, reset, export/import |
 | **Guest** (no PIN) | Read-only: view standings, matches, dashboard |
 
-- PIN is stored as `const ADMIN_PIN = '2025'` at line ~1207 — change it there
+- PIN is stored as `const ADMIN_PIN = '2025'` at line ~1247 — change it there
 - Role persists in `sessionStorage` (survives refresh, clears on tab close)
-- Guest mode applies CSS class `body.guest-mode` which hides `.btn-primary`, `.btn-success`, `.btn-danger`, `.score-entry`, `.header-actions` and disables all inputs
+- **Logout** button appears in header for both admin and guest — returns to auth gate
+- Guest mode applies CSS class `body.guest-mode` which:
+  - Hides `.btn-primary`, `.btn-success`, `.btn-danger`, `.score-entry`, `.header-actions`, `.admin-only`
+  - Disables all inputs and selects via `pointer-events: none`
+  - Blocks leader toggle and group reassignment clicks
+  - Hides edit score pencil icons, finals edit buttons, bulk add/auto-assign, remove player buttons
+  - Hides the "Add Player" form entirely
+  - JS guards (`if (!isAdmin()) return`) on: `toggleLeader`, `editScore`, `showGroupPicker`, `renamePlayer`, `showBulkAdd`, `autoAssignGroups`, `editFinalGame`
 
 ---
 
@@ -122,14 +135,16 @@ state = {
     numGroups: 5, playersPerGroup: 6, matchesPerPlayer: 4,
     pointsToWin: 21, deuceEnabled: true, deuceCap: 25,
     winWeight: 20, advanceTop: 3, semiFinalSlots: 8,
-    finalsFormat: 'bestOf3'
+    finalsFormat: 'bestOf3',
+    championPoolFormat: 'bestOf3',   // Finals format per pool
+    consolationPoolFormat: 'single'
   },
   players: [{ id, name }],
   groups: [{ id, name, playerIds[], leaderId, court }],
   rounds: {
     qr1:   { status, matches[], standings[] },
     qr2:   { status, pools: { champion[], consolation[] }, matches[], standings[] },
-    semis:  { status, matches[] },
+    semis:  { status, matches[], poolFormats: { champion, consolation } },
     finals: { status, matches[] }
   }
 }
@@ -192,6 +207,7 @@ git push  # GitHub Pages auto-deploys from main branch
 | Library | Version | CDN | Purpose |
 |---------|---------|-----|---------|
 | SheetJS (xlsx) | 0.20.3 | `cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js` | Parse .xlsx/.xls/.csv roster imports |
+| Supabase JS | 2.x | `cdn.jsdelivr.net/npm/@supabase/supabase-js@2` | Real-time sync, remote state storage |
 | Google Fonts | — | Outfit, DM Sans, DM Mono | Typography |
 
 No npm packages. No build tools.
@@ -229,17 +245,16 @@ No npm packages. No build tools.
 
 ## Known Limitations
 
-1. **No real-time sync** — single-device state in localStorage. Multiple admins on different devices will overwrite each other. Workaround: one admin device, guests view on their phones.
-2. **PIN is client-side** — not secure, just a convenience gate. Anyone can view source to find the PIN. Adequate for a casual club tournament.
-3. **No undo** — score submissions and round advancements are permanent (can only Reset entire tournament).
-4. **Fixed 2v2 format** — the schedule generator assumes doubles (2 players per team). Singles or mixed formats would require refactoring `generateDoublesSchedule`.
-5. **Mobile CSS in separate style block** — due to a browser CSS parsing quirk, the mobile media queries must live in a second `<style>` tag. Keep them there when editing.
+1. **PIN is client-side** — not secure, just a convenience gate. Anyone can view source to find the PIN. Adequate for a casual club tournament.
+2. **No undo** — score submissions and round advancements are permanent (can only Reset entire tournament).
+3. **Fixed 2v2 format** — the schedule generator assumes doubles (2 players per team). Singles or mixed formats would require refactoring `generateDoublesSchedule`.
+4. **Mobile CSS in separate style block** — due to a browser CSS parsing quirk, the mobile media queries must live in a second `<style>` tag. Keep them there when editing.
+5. **Last-write-wins sync** — when two admins write simultaneously, the second writer's changes pull the latest remote state. True field-level merging is not implemented.
 
 ---
 
 ## Future Improvements (Not Implemented)
 
-- Real-time sync via Firebase/Supabase for multi-device admin
 - QR code display for easy guest access link sharing
 - Print-friendly bracket view
 - Player stats history across tournaments
