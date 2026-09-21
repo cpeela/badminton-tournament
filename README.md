@@ -22,21 +22,25 @@ No build tools, no dependencies (except SheetJS and Supabase CDNs). Just a singl
 
 ## Architecture
 
-### Single-file structure (`tournament-v2.html` / `index.html` — 2916 lines)
+### Single-file structure (`tournament-v2.html` / `index.html` — ~4700 lines)
 
-| Section | Lines | Description |
-|---------|-------|-------------|
-| **CSS (style 1)** | 10–1010 | Design tokens, component styles, 768px responsive breakpoint |
-| **CSS (style 2)** | 1011–1133 | Mobile breakpoints (480px, 375px) — separate `<style>` block to avoid parse issues |
-| **HTML** | 1134–1200 | Static skeleton: auth gate, header, tabs, main panels, modal, toast container |
-| **JS: Auth** | 1416–1530 | PIN gate (super admin / admin / guest), session persistence |
-| **JS: State** | 1297–1380 | State schema, localStorage persistence, export, import roster (xlsx) |
-| **JS: Utils** | 1382–1515 | `uid()`, `getPlayerName()`, `toast()`, player/group CRUD, group picker modal |
-| **JS: Core Logic** | 1515–1670 | `validateScore()`, `generateDoublesSchedule()`, `computeStandings()` |
-| **JS: Renderers** | 1674–2800 | `renderSetup()`, `renderQR1()`, `renderQR2()`, `renderSemis()`, `renderFinals()`, `renderDashboard()` |
-| **JS: Supabase Sync** | ~1350–1570 | Real-time sync, conflict resolution, offline fallback |
-| **JS: Navigation** | ~3100–3150 | Hash-based page routing (ARIA-compliant keyboard nav) |
-| **JS: Init** | ~3160–3220 | Default player seeding, `renderAll()`, `applyRoute()` |
+Sections appear in this order (search for the `═══` banner comments to jump between them):
+
+| Section | Description |
+|---------|-------------|
+| **Pre-paint theme script** | Applies saved `bt_theme` before first render |
+| **CSS (style 1)** | Light/dark tokens, type scale, component styles, desktop layout |
+| **CSS (style 2)** | Mobile breakpoints (768px, 480px, 375px) — separate `<style>` block to avoid parse issues |
+| **HTML** | Static skeleton: auth gate, header (theme toggle, More menu), tabs, main panels, modal, toast container, bracket overlay |
+| **JS: Auth** | PIN gate (super admin / admin / guest), session persistence |
+| **JS: Theme** | `applyTheme()` / segmented toggle wiring |
+| **JS: State** | `SCHEMA_VERSION`, `migrateState()`, localStorage persistence, export, import roster (xlsx) |
+| **JS: Utils** | `uid()`, `getPlayerName()` / `getPlayerNameSafe()`, `escapeHtml()`, `toast()`, `openModal()` / `confirmModal()`, player/group CRUD |
+| **JS: Core Logic** | `validateScore()`, `generateDoublesSchedule()`, `computeStandings()` |
+| **JS: Renderers** | `renderSetup()`, `renderQR1()`, `renderQR2()`, `renderSemis()`, `renderFinals()`, `renderDashboard()`, `renderBracket()` |
+| **JS: Supabase Sync** | Real-time sync, conflict resolution, offline fallback |
+| **JS: Navigation** | Hash-based page routing (ARIA-compliant keyboard nav, active tab scroll-into-view on mobile) |
+| **JS: Init** | Default player seeding, `renderAll()`, `applyRoute()` |
 
 ### Why single-file?
 - Zero-deploy friction (GitHub Pages serves `index.html`)
@@ -53,6 +57,8 @@ Setup (#setup) → Qualifier R1 (#qr1) → Qualifier R2 (#qr2) → Semi-Finals (
 ```
 
 Each page is a hash route — shareable, bookmarkable, with browser back/forward navigation.
+
+**Per-pool advancement**: from QR2 onward the Champion and Consolation pools progress independently. Each pool has its own "Advance" button (QR2 → Semis, Semis → Final) that enables once that pool's matches are done, so one pool can start its final while the other is still in semis. QR1 → QR2 stays global because both pools are seeded from every group's results.
 
 ### 1. Setup
 - 30 players, 5 groups of 6
@@ -145,12 +151,14 @@ state = {
   groups: [{ id, name, playerIds[], leaderId, court }],
   rounds: {
     qr1:   { status, matches[], standings[] },
-    qr2:   { status, pools: { champion[], consolation[] }, matches[], standings[] },
-    semis:  { status, matches[], poolFormats: { champion, consolation } },
-    finals: { status, matches[] }
+    qr2:   { status, poolStatus: { champion, consolation }, pools: { champion[], consolation[] }, matches[], standings[] },
+    semis:  { status, poolStatus: { champion, consolation }, matches[], poolFormats: { champion, consolation } },
+    finals: { status, poolStatus: { champion, consolation }, matches[] }
   }
 }
 ```
+
+`poolStatus` values are `'not_started' | 'in_progress' | 'completed'` per pool; the round-level `status` is derived from them by `recomputeRoundStatus()` (`completed` only when both pools are). `schemaVersion` is currently 3 — `migrateState()` backfills older saved/remote states (v2 states get `poolStatus` copied from the round status).
 
 ### Match object
 ```javascript
@@ -217,6 +225,13 @@ No npm packages. No build tools.
 ---
 
 ## Design System
+
+### Theming
+- Light and dark themes via CSS custom properties on `html[data-theme="light"|"dark"]`; with no attribute set, the app follows `prefers-color-scheme`.
+- Header segmented control: **Light / Dark / System** (a compact cycle button on phones). Choice persists in `localStorage` key `bt_theme`.
+- A pre-paint inline `<script>` in `<head>` applies the saved theme before first render to avoid a flash.
+- All colors are tokens (`--bg`, `--surface`, `--surface-2`, `--border`, `--text`, `--text-2`, `--text-3`, `--primary`, `--accent`, `--success`, `--warning`, `--danger`, `--champion`, `--consolation`, shadows). Do not hardcode hex values in components.
+- Destructive / round-advancing actions (start, advance, reset, roster import) use the in-app `confirmModal()` instead of native `confirm()`.
 
 ### Fonts
 - **Display**: Outfit (headings, tabs, labels)
