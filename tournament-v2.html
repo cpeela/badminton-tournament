@@ -2153,9 +2153,11 @@ async function pushStateToSupabase() {
       .single();
 
     if (error || !data) {
-      // Version conflict — another client wrote first
-      console.warn('Sync conflict, pulling remote state');
+      // Version conflict — another client wrote first. Merge their state with
+      // our newer per-match edits, then push again.
+      console.warn('Sync conflict, merging remote state');
       await pullAndMerge();
+      _pushQueue = true;
     } else {
       _remoteVersion = data.version;
     }
@@ -2183,20 +2185,55 @@ async function pullAndMerge() {
 
     if (error || !data) return;
 
-    // Preserve local UI-only state
-    const localUi = {
-      _activeQR1Group: state._activeQR1Group,
-      _activeQR2Pool: state._activeQR2Pool,
-    };
-
-    state = Object.assign({}, migrateState(data.state), localUi);
-    _remoteVersion = data.version;
-    saveStateLocal();
-    renderAll();
+    applyRemoteState(data.state, data.version);
     showSyncBadge('connected');
   } catch(e) {
     console.warn('Pull failed:', e);
   }
+}
+
+// Replace state with the remote snapshot, keeping any local match edits that
+// are newer than the remote copy, and keeping whatever is being typed.
+function applyRemoteState(remoteState, version) {
+  const localUi = {
+    _activeQR1Group: state._activeQR1Group,
+    _activeQR2Pool: state._activeQR2Pool,
+  };
+  state = Object.assign({}, mergeMatchEdits(migrateState(remoteState), state), localUi);
+  _remoteVersion = version;
+  saveStateLocal();
+  withPreservedInputs(renderAll);
+}
+
+function mergeMatchEdits(remote, local) {
+  ['qr1', 'qr2', 'semis', 'finals'].forEach(key => {
+    const r = remote.rounds[key], l = local.rounds && local.rounds[key];
+    if (!r || !l) return;
+    const localById = new Map(l.matches.map(m => [m.id, m]));
+    r.matches = r.matches.map(rm => {
+      const lm = localById.get(rm.id);
+      return lm && (lm.updatedAt || 0) > (rm.updatedAt || 0) ? lm : rm;
+    });
+    if (key === 'finals' && r.poolStatus) {
+      r.matches.forEach(fm => { r.poolStatus[fm.pool] = fm.status === 'completed' ? 'completed' : 'in_progress'; });
+      recomputeRoundStatus(r);
+    }
+  });
+  return remote;
+}
+
+function touchMatch(m) { m.updatedAt = Date.now(); }
+
+// Re-rendering replaces every input; snapshot typed-but-unsaved values first.
+function withPreservedInputs(render) {
+  const saved = [];
+  document.querySelectorAll('.main input, .main select').forEach(el => {
+    if (el.id && el.value !== '' && el.value !== el.defaultValue) saved.push({ id: el.id, value: el.value });
+  });
+  const focusId = document.activeElement && document.activeElement.id;
+  render();
+  saved.forEach(({ id, value }) => { const el = document.getElementById(id); if (el) el.value = value; });
+  if (focusId) { const el = document.getElementById(focusId); if (el) el.focus({ preventScroll: true }); }
 }
 
 function subscribeToChanges() {
@@ -2216,16 +2253,7 @@ function subscribeToChanges() {
         const remote = payload.new;
         // Ignore if we already have this version (our own write)
         if (remote.version <= _remoteVersion) return;
-
-        const localUi = {
-          _activeQR1Group: state._activeQR1Group,
-          _activeQR2Pool: state._activeQR2Pool,
-        };
-
-        state = Object.assign({}, migrateState(remote.state), localUi);
-        _remoteVersion = remote.version;
-        saveStateLocal();
-        renderAll();
+        applyRemoteState(remote.state, remote.version);
       }
     )
     .subscribe((status) => {
@@ -3606,6 +3634,7 @@ function submitScore(matchId, round) {
   m.winner = s1 > s2 ? 'team1' : 'team2';
   if (ctEl) m.court = ctEl.value.trim();
   if (bdEl && bdEl.value) m.birdies = parseInt(bdEl.value) || 0;
+  touchMatch(m);
   saveState();
 
   if (round === 'qr1') renderQR1();
@@ -3622,6 +3651,7 @@ function editScore(matchId, round) {
   m.team1.score = null;
   m.team2.score = null;
   m.winner = null;
+  touchMatch(m);
   saveState();
 
   if (round === 'qr1') renderQR1();
@@ -3928,6 +3958,7 @@ function submitSemisGame(matchId, gameIdx) {
   if (m.team1.gamesWon >= 2) { m.winner = 'team1'; m.status = 'completed'; }
   else if (m.team2.gamesWon >= 2) { m.winner = 'team2'; m.status = 'completed'; }
 
+  touchMatch(m);
   saveState();
   renderSemis();
   if (m.winner) toast(m.label + ' won by ' + getPlayerNamesSafe(m[m.winner].playerIds) + '!', 'success');
@@ -3945,6 +3976,7 @@ function editSemisGame(matchId, gameIdx) {
   m.team2.gamesWon = m.games.filter(x => x.winner === 'team2').length;
   m.winner = null;
   m.status = 'in_progress';
+  touchMatch(m);
   saveState();
   renderSemis();
 }
@@ -4229,6 +4261,7 @@ function submitFinalGame(matchId, gameIdx) {
   state.rounds.finals.poolStatus[fm.pool] = fm.status === 'completed' ? 'completed' : 'in_progress';
   recomputeRoundStatus(state.rounds.finals);
 
+  touchMatch(fm);
   saveState();
   renderFinals();
   renderDashboard();
@@ -4248,6 +4281,7 @@ function editFinalGame(matchId, gameIdx) {
   fm.status = 'in_progress';
   state.rounds.finals.poolStatus[fm.pool] = 'in_progress';
   recomputeRoundStatus(state.rounds.finals);
+  touchMatch(fm);
   saveState();
   renderFinals();
   renderDashboard();

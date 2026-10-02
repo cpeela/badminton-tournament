@@ -266,7 +266,7 @@ No npm packages. No build tools.
 2. **No undo** — score submissions and round advancements are permanent (can only Reset entire tournament).
 3. **Fixed 2v2 format** — the schedule generator assumes doubles (2 players per team). Singles or mixed formats would require refactoring `generateDoublesSchedule`.
 4. **Mobile CSS in separate style block** — due to a browser CSS parsing quirk, the mobile media queries must live in a second `<style>` tag. Keep them there when editing.
-5. **Last-write-wins sync** — when two admins write simultaneously, the second writer's changes pull the latest remote state. True field-level merging is not implemented.
+5. **Per-match merge on sync conflicts** — each match carries an `updatedAt` stamp set on score entry/edit. When two admins write simultaneously, the loser of the version race pulls the remote state, keeps any of its own matches that are newer, and pushes again (`mergeMatchEdits`). Non-match changes (config, round advancement) are still last-write-wins, so have one person drive advancement. Incoming updates also preserve whatever a user is mid-typing (`withPreservedInputs`).
 
 ---
 
