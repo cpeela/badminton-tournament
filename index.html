@@ -2855,13 +2855,36 @@ function generateDoublesSchedule(playerIds, matchesPerPlayer) {
     if (bestResult && bestResult.length === totalMatchesNeeded) break;
   }
 
-  const finalResult = bestResult || [];
+  const finalResult = spreadMatches(bestResult || [], playerIds);
   // Warn the admin rather than silently proceeding with zero/short schedules —
   // can happen for non-default player counts / matchesPerPlayer combos.
   if (finalResult.length === 0 || finalResult.length < Math.floor(n / 2)) {
     toast(`Schedule generation produced only ${finalResult.length} match(es) for ${n} players — check matches-per-player setting`, 'error');
   }
   return finalResult;
+}
+
+// Order matches so each player's games are spread out with rest between them:
+// always pick next the match whose least-rested player has waited longest,
+// breaking ties toward players who have played fewest matches so far.
+function spreadMatches(matches, playerIds) {
+  const lastPlayed = {}, played = {};
+  playerIds.forEach(id => { lastPlayed[id] = -Infinity; played[id] = 0; });
+  const remaining = [...matches];
+  const ordered = [];
+  while (remaining.length) {
+    let bestIdx = 0, bestRest = -Infinity, bestLoad = Infinity;
+    remaining.forEach((m, i) => {
+      const ids = [...m.team1, ...m.team2];
+      const rest = Math.min(...ids.map(id => ordered.length - lastPlayed[id]));
+      const load = ids.reduce((s, id) => s + played[id], 0);
+      if (rest > bestRest || (rest === bestRest && load < bestLoad)) { bestIdx = i; bestRest = rest; bestLoad = load; }
+    });
+    const [m] = remaining.splice(bestIdx, 1);
+    [...m.team1, ...m.team2].forEach(id => { lastPlayed[id] = ordered.length; played[id]++; });
+    ordered.push(m);
+  }
+  return ordered;
 }
 
 // ═══════════════════════════════════════════════════════════════
