@@ -2756,7 +2756,7 @@ function validateScore(s1, s2, config) {
 function generateDoublesSchedule(playerIds, matchesPerPlayer) {
   const n = playerIds.length;
   if (n < 4) return [];
-  const totalMatchesNeeded = Math.round((n * matchesPerPlayer) / 4);
+  const totalMatchesNeeded = Math.floor((n * matchesPerPlayer) / 4);
 
   const pairs = [];
   for (let i = 0; i < n; i++)
@@ -2771,9 +2771,12 @@ function generateDoublesSchedule(playerIds, matchesPerPlayer) {
       if (ids.size === 4) allMatchups.push([p1, p2]);
     }
 
-  function solve(matchups, target, playerIds, maxPerPlayer) {
+  const pairKey = (p) => p[0] < p[1] ? p[0] + '|' + p[1] : p[1] + '|' + p[0];
+
+  function solve(matchups, target, playerIds, maxPerPlayer, uniquePartners) {
     const matchCount = {};
     playerIds.forEach(id => matchCount[id] = 0);
+    const usedPairs = new Set();
     const selected = [];
 
     function backtrack(startIdx) {
@@ -2782,11 +2785,15 @@ function generateDoublesSchedule(playerIds, matchesPerPlayer) {
         const [p1, p2] = matchups[i];
         const all = [...p1, ...p2];
         if (all.some(id => matchCount[id] >= maxPerPlayer)) continue;
+        const k1 = pairKey(p1), k2 = pairKey(p2);
+        if (uniquePartners && (usedPairs.has(k1) || usedPairs.has(k2))) continue;
         selected.push({ team1: [...p1], team2: [...p2] });
         all.forEach(id => matchCount[id]++);
+        usedPairs.add(k1); usedPairs.add(k2);
         if (backtrack(i + 1)) return true;
         selected.pop();
         all.forEach(id => matchCount[id]--);
+        usedPairs.delete(k1); usedPairs.delete(k2);
       }
       return false;
     }
@@ -2798,21 +2805,26 @@ function generateDoublesSchedule(playerIds, matchesPerPlayer) {
   let bestResult = null;
   const attempts = 10;
 
-  for (let attempt = 0; attempt < attempts; attempt++) {
-    const shuffled = [...allMatchups];
-    for (let i = shuffled.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-    }
+  // Prefer schedules where nobody partners with the same player twice;
+  // only relax that if the config makes it impossible.
+  for (const uniquePartners of [true, false]) {
+    for (let attempt = 0; attempt < attempts; attempt++) {
+      const shuffled = [...allMatchups];
+      for (let i = shuffled.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+      }
 
-    const result = solve(shuffled, totalMatchesNeeded, playerIds, matchesPerPlayer);
-    if (result.length === totalMatchesNeeded) {
-      bestResult = result;
-      break;
+      const result = solve(shuffled, totalMatchesNeeded, playerIds, matchesPerPlayer, uniquePartners);
+      if (result.length === totalMatchesNeeded) {
+        bestResult = result;
+        break;
+      }
+      if (!bestResult || result.length > bestResult.length) {
+        bestResult = result;
+      }
     }
-    if (!bestResult || result.length > bestResult.length) {
-      bestResult = result;
-    }
+    if (bestResult && bestResult.length === totalMatchesNeeded) break;
   }
 
   const finalResult = bestResult || [];
