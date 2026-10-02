@@ -2801,27 +2801,39 @@ function generateDoublesSchedule(playerIds, matchesPerPlayer) {
 
   const pairKey = (p) => p[0] < p[1] ? p[0] + '|' + p[1] : p[1] + '|' + p[0];
 
-  function solve(matchups, target, playerIds, maxPerPlayer, uniquePartners) {
+  const oppKeys = (p1, p2) => [pairKey([p1[0], p2[0]]), pairKey([p1[0], p2[1]]), pairKey([p1[1], p2[0]]), pairKey([p1[1], p2[1]])];
+
+  function solve(matchups, target, playerIds, maxPerPlayer, uniquePartners, maxOpp) {
     const matchCount = {};
     playerIds.forEach(id => matchCount[id] = 0);
     const usedPairs = new Set();
+    const oppCount = {};
     const selected = [];
+    // Infeasible tiers (e.g. unique opponents in an 8-player group) would
+    // otherwise search exhaustively; cap the work and move to the next tier.
+    let nodes = 0;
+    const NODE_BUDGET = 12000;
 
     function backtrack(startIdx) {
       if (selected.length === target) return true;
+      if (++nodes > NODE_BUDGET) return false;
       for (let i = startIdx; i < matchups.length; i++) {
         const [p1, p2] = matchups[i];
         const all = [...p1, ...p2];
         if (all.some(id => matchCount[id] >= maxPerPlayer)) continue;
         const k1 = pairKey(p1), k2 = pairKey(p2);
         if (uniquePartners && (usedPairs.has(k1) || usedPairs.has(k2))) continue;
+        const oks = oppKeys(p1, p2);
+        if (maxOpp && oks.some(k => (oppCount[k] || 0) >= maxOpp)) continue;
         selected.push({ team1: [...p1], team2: [...p2] });
         all.forEach(id => matchCount[id]++);
         usedPairs.add(k1); usedPairs.add(k2);
+        oks.forEach(k => oppCount[k] = (oppCount[k] || 0) + 1);
         if (backtrack(i + 1)) return true;
         selected.pop();
         all.forEach(id => matchCount[id]--);
         usedPairs.delete(k1); usedPairs.delete(k2);
+        oks.forEach(k => oppCount[k]--);
       }
       return false;
     }
@@ -2833,9 +2845,11 @@ function generateDoublesSchedule(playerIds, matchesPerPlayer) {
   let bestResult = null;
   const attempts = 10;
 
-  // Prefer schedules where nobody partners with the same player twice;
-  // only relax that if the config makes it impossible.
-  for (const uniquePartners of [true, false]) {
+  // Strictest first: unique partners AND unique opponents; then allow an
+  // opponent twice; then only unique partners; then anything. Relax only
+  // when the config makes a tier impossible (e.g. 6-player groups).
+  const tiers = [[true, 1], [true, 2], [true, 0], [false, 0]];
+  for (const [uniquePartners, maxOpp] of tiers) {
     for (let attempt = 0; attempt < attempts; attempt++) {
       const shuffled = [...allMatchups];
       for (let i = shuffled.length - 1; i > 0; i--) {
@@ -2843,7 +2857,7 @@ function generateDoublesSchedule(playerIds, matchesPerPlayer) {
         [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
       }
 
-      const result = solve(shuffled, totalMatchesNeeded, playerIds, matchesPerPlayer, uniquePartners);
+      const result = solve(shuffled, totalMatchesNeeded, playerIds, matchesPerPlayer, uniquePartners, maxOpp);
       if (result.length === totalMatchesNeeded) {
         bestResult = result;
         break;
