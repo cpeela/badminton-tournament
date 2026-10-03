@@ -842,11 +842,13 @@ td.col-rank { font-family: var(--font-mono); font-size: var(--fs-small); color: 
 .leader-star { color: var(--champion); font-size: 12px; margin-left: 4px; vertical-align: 1px; }
 .table-caption { font-size: var(--fs-small); line-height: var(--lh-small); color: var(--text-3); margin: -6px 0 10px; }
 .table-caption strong { color: var(--text-2); font-weight: 500; }
-.standings-table th[title] { cursor: help; text-decoration: underline dotted; text-underline-offset: 3px; text-decoration-color: var(--border-strong); }
+.standings-table th.th-stat { cursor: help; text-decoration: underline dotted; text-underline-offset: 3px; text-decoration-color: var(--border-strong); }
+.standings-table th.th-stat:hover, .standings-table th.th-stat:focus-visible { color: var(--text); }
 .standings-table th .th-short { display: none; }
-.table-legend { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: var(--fs-caption); line-height: var(--lh-small); color: var(--text-3); margin: -12px 0 20px; }
-.table-legend strong { color: var(--text-2); font-weight: 600; font-family: var(--font-mono); }
-.table-legend-note { flex-basis: 100%; }
+.legend-list { display: grid; gap: 10px; margin: 12px 0 0; }
+.legend-list dt { font-size: var(--fs-small); color: var(--text); }
+.legend-list dt strong { font-family: var(--font-mono); color: var(--primary); margin-right: 6px; }
+.legend-list dd { margin: 2px 0 0; font-size: var(--fs-small); line-height: var(--lh-small); color: var(--text-2); }
 .helper-text { font-size: var(--fs-small); line-height: var(--lh-small); color: var(--text-3); margin-top: 8px; }
 .pool-status-line { display: flex; align-items: center; gap: 6px; }
 .pool-status-line + .pool-status-line { margin-top: 4px; }
@@ -2982,13 +2984,22 @@ const STANDINGS_COLUMNS = [
 function standingsHeaderCells() {
   const cells = STANDINGS_COLUMNS.map(c => {
     const tip = escapeHtml(typeof c.tip === 'function' ? c.tip() : c.tip);
-    return `<th class="col-num ${c.cls || ''}" title="${tip}" aria-label="${escapeHtml(c.full)}: ${tip}"><span class="th-full">${c.full}</span><span class="th-short" aria-hidden="true">${c.short}</span></th>`;
+    return `<th class="col-num ${c.cls || ''} th-stat" title="${tip}" role="button" tabindex="0" aria-label="${escapeHtml(c.full)}: ${tip}. Tap for all definitions" onclick="showStandingsLegend()" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();showStandingsLegend()}"><span class="th-full">${c.full}</span><span class="th-short" aria-hidden="true">${c.short}</span></th>`;
   }).join('');
   return `<th class="col-rank" title="Rank">#</th><th>Player</th>${cells}`;
 }
 
-function standingsLegend() {
-  return `<div class="table-legend">${STANDINGS_COLUMNS.map(c => `<span><strong>${c.short}</strong> ${c.full}</span>`).join('')}<span class="table-legend-note">WP = Wins × ${state.config.winWeight || 20} + (PF − PA) · ties: Wins → PF → PA</span></div>`;
+function showStandingsLegend() {
+  const w = state.config.winWeight || 20;
+  openModal(`
+    <h2>Standings columns</h2>
+    <dl class="legend-list">
+      ${STANDINGS_COLUMNS.map(c => `<div><dt><strong>${c.short}</strong> ${c.full}</dt><dd>${escapeHtml(typeof c.tip === 'function' ? c.tip() : c.tip)}</dd></div>`).join('')}
+    </dl>
+    <div class="formula-box" style="margin-top:14px">WP = Wins × ${w} + (PF − PA)</div>
+    <p class="helper-text">Ranked by WP. If tied: most Wins → most Points For → fewest Points Against. Still tied → marked <span class="badge badge-warning">Tie</span> for the officiating table.</p>
+    <button type="button" class="btn mt-16 w-full" onclick="closeModal()" data-autofocus>Got it</button>
+  `);
 }
 
 function isDeadHeat(a, b) {
@@ -3598,7 +3609,6 @@ function renderQR1() {
           </tbody>
         </table>
       </div>
-      ${standingsLegend()}
 
       <!-- Matches -->
       <div class="card-section-title">Matches</div>
@@ -3864,7 +3874,6 @@ function renderQR2() {
         </tbody>
       </table>
     </div>
-    ${standingsLegend()}
 
     <div class="card-section-title">Matches</div>
     ${poolMatches.map(m => renderMatchRow(m, 'qr2')).join('')}
