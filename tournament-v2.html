@@ -842,6 +842,11 @@ td.col-rank { font-family: var(--font-mono); font-size: var(--fs-small); color: 
 .leader-star { color: var(--champion); font-size: 12px; margin-left: 4px; vertical-align: 1px; }
 .table-caption { font-size: var(--fs-small); line-height: var(--lh-small); color: var(--text-3); margin: -6px 0 10px; }
 .table-caption strong { color: var(--text-2); font-weight: 500; }
+.standings-table th[title] { cursor: help; text-decoration: underline dotted; text-underline-offset: 3px; text-decoration-color: var(--border-strong); }
+.standings-table th .th-short { display: none; }
+.table-legend { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: var(--fs-caption); line-height: var(--lh-small); color: var(--text-3); margin: -12px 0 20px; }
+.table-legend strong { color: var(--text-2); font-weight: 600; font-family: var(--font-mono); }
+.table-legend-note { flex-basis: 100%; }
 .helper-text { font-size: var(--fs-small); line-height: var(--lh-small); color: var(--text-3); margin-top: 8px; }
 .pool-status-line { display: flex; align-items: center; gap: 6px; }
 .pool-status-line + .pool-status-line { margin-top: 4px; }
@@ -1751,6 +1756,8 @@ body.super-admin-mode .super-admin-only { display: inline-flex !important; }
   th, td { padding: 0 8px; font-size: 13px; }
   td { height: 40px; }
   .col-windiff, .col-lossdiff { display: none; }
+  .standings-table th .th-full { display: none; }
+  .standings-table th .th-short { display: inline; }
   .col-rank { width: 40px; padding: 0 4px; }
   .col-player { max-width: 140px; white-space: normal; }
   .table-caption { margin-top: -4px; }
@@ -2962,6 +2969,28 @@ function sortStandings(standings) {
     (a.totalPointsConceded - b.totalPointsConceded));
 }
 
+// Shared standings header: full labels on desktop, abbreviations on phones,
+// with a tooltip on every stat so players can learn what each column means.
+const STANDINGS_COLUMNS = [
+  { key: 'wins', full: 'Wins', short: 'W', tip: 'Matches won' },
+  { key: 'losses', full: 'Losses', short: 'L', tip: 'Matches lost' },
+  { key: 'pf', full: 'Points For', short: 'PF', cls: 'col-pf', tip: 'Total points your teams scored across all your matches' },
+  { key: 'pa', full: 'Points Against', short: 'PA', cls: 'col-pa', tip: 'Total points scored against your teams across all your matches' },
+  { key: 'wp', full: 'Weighted Points', short: 'WP', tip: () => `Wins × ${state.config.winWeight || 20} + (Points For − Points Against). Primary ranking; ties go to Wins, then Points For, then Points Against` },
+];
+
+function standingsHeaderCells() {
+  const cells = STANDINGS_COLUMNS.map(c => {
+    const tip = escapeHtml(typeof c.tip === 'function' ? c.tip() : c.tip);
+    return `<th class="col-num ${c.cls || ''}" title="${tip}" aria-label="${escapeHtml(c.full)}: ${tip}"><span class="th-full">${c.full}</span><span class="th-short" aria-hidden="true">${c.short}</span></th>`;
+  }).join('');
+  return `<th class="col-rank" title="Rank">#</th><th>Player</th>${cells}`;
+}
+
+function standingsLegend() {
+  return `<div class="table-legend">${STANDINGS_COLUMNS.map(c => `<span><strong>${c.short}</strong> ${c.full}</span>`).join('')}<span class="table-legend-note">WP = Wins × ${state.config.winWeight || 20} + (PF − PA) · ties: Wins → PF → PA</span></div>`;
+}
+
 function isDeadHeat(a, b) {
   return !!a && !!b && a.weightedPoints === b.weightedPoints && a.wins === b.wins &&
     a.totalPointsScored === b.totalPointsScored &&
@@ -3550,7 +3579,7 @@ function renderQR1() {
       <div class="table-wrap mb-20">
         <table class="standings-table">
           <thead><tr>
-            <th class="col-rank">#</th><th>Player</th><th class="col-num">W</th><th class="col-num">L</th><th class="col-num col-pf">PF</th><th class="col-num col-pa">PA</th><th class="col-num" title="Weighted points: Wins × ${state.config.winWeight || 20} + Σ win margins − Σ loss margins">WP</th>
+            ${standingsHeaderCells()}
             ${qr1.status === 'completed' ? '<th>Pool</th>' : ''}
           </tr></thead>
           <tbody>
@@ -3569,6 +3598,7 @@ function renderQR1() {
           </tbody>
         </table>
       </div>
+      ${standingsLegend()}
 
       <!-- Matches -->
       <div class="card-section-title">Matches</div>
@@ -3816,7 +3846,7 @@ function renderQR2() {
     <div class="table-wrap mb-20">
       <table class="standings-table">
         <thead><tr>
-          <th class="col-rank">#</th><th>Player</th><th class="col-num">W</th><th class="col-num">L</th><th class="col-num col-pf">PF</th><th class="col-num col-pa">PA</th><th class="col-num" title="Weighted points: Wins × ${state.config.winWeight || 20} + Σ win margins − Σ loss margins">WP</th>
+          ${standingsHeaderCells()}
           ${poolDone ? '<th>Status</th>' : ''}
         </tr></thead>
         <tbody>
@@ -3834,6 +3864,7 @@ function renderQR2() {
         </tbody>
       </table>
     </div>
+    ${standingsLegend()}
 
     <div class="card-section-title">Matches</div>
     ${poolMatches.map(m => renderMatchRow(m, 'qr2')).join('')}
