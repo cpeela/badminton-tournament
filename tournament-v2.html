@@ -2918,7 +2918,8 @@ function computeStandings(playerIds, matches, config) {
       playerId: id,
       wins: 0, losses: 0, matchesPlayed: 0,
       totalPointsScored: 0, totalPointsConceded: 0,
-      winPointDiff: 0, lossPointDiff: 0
+      winPointDiff: 0, lossPointDiff: 0,
+      weightedPoints: 0
     };
   });
 
@@ -2945,6 +2946,10 @@ function computeStandings(playerIds, matches, config) {
       else { stats[id].losses++; stats[id].lossPointDiff += (s1 - s2); }
     });
   });
+
+  // Informational only — ranking uses sortStandings(), not WP.
+  const w = config.winWeight || 20;
+  Object.values(stats).forEach(s => { s.weightedPoints = s.wins * w + s.winPointDiff - s.lossPointDiff; });
 
   return Object.values(stats);
 }
@@ -3545,7 +3550,7 @@ function renderQR1() {
       <div class="table-wrap mb-20">
         <table class="standings-table">
           <thead><tr>
-            <th class="col-rank">#</th><th>Player</th><th class="col-num">W</th><th class="col-num">L</th><th class="col-num col-pf">PF</th><th class="col-num col-pa">PA</th>
+            <th class="col-rank">#</th><th>Player</th><th class="col-num">W</th><th class="col-num">L</th><th class="col-num col-pf">PF</th><th class="col-num col-pa">PA</th><th class="col-num" title="Weighted points: Wins × ${state.config.winWeight || 20} + Σ win margins − Σ loss margins (for reference)">WP</th>
             ${qr1.status === 'completed' ? '<th>Pool</th>' : ''}
           </tr></thead>
           <tbody>
@@ -3557,6 +3562,7 @@ function renderQR1() {
                 <td class="col-player">${getPlayerNameSafe(s.playerId)}${isLeader ? '<span class="leader-star" title="Group leader" aria-label="Group leader">★</span>' : ''}${tieBadge(standings, i)}</td>
                 <td class="col-num col-strong">${s.wins}</td><td class="col-num">${s.losses}</td>
                 <td class="col-num col-pf">${s.totalPointsScored}</td><td class="col-num col-pa">${s.totalPointsConceded}</td>
+                <td class="col-num">${s.weightedPoints}</td>
                 ${qr1.status === 'completed' ? `<td><span class="badge ${isTop ? 'badge-champion' : 'badge-consolation'}">${isTop ? 'Pool A' : 'Pool B'}</span></td>` : ''}
               </tr>`;
             }).join('')}
@@ -3810,7 +3816,7 @@ function renderQR2() {
     <div class="table-wrap mb-20">
       <table class="standings-table">
         <thead><tr>
-          <th class="col-rank">#</th><th>Player</th><th class="col-num">W</th><th class="col-num">L</th><th class="col-num col-pf">PF</th><th class="col-num col-pa">PA</th>
+          <th class="col-rank">#</th><th>Player</th><th class="col-num">W</th><th class="col-num">L</th><th class="col-num col-pf">PF</th><th class="col-num col-pa">PA</th><th class="col-num" title="Weighted points: Wins × ${state.config.winWeight || 20} + Σ win margins − Σ loss margins (for reference)">WP</th>
           ${poolDone ? '<th>Status</th>' : ''}
         </tr></thead>
         <tbody>
@@ -3821,6 +3827,7 @@ function renderQR2() {
               <td class="col-player">${getPlayerNameSafe(s.playerId)}${tieBadge(standings, i)}</td>
               <td class="col-num col-strong">${s.wins}</td><td class="col-num">${s.losses}</td>
               <td class="col-num col-pf">${s.totalPointsScored}</td><td class="col-num col-pa">${s.totalPointsConceded}</td>
+              <td class="col-num">${s.weightedPoints}</td>
               ${poolDone ? `<td>${advances ? '<span class="badge badge-success">Advances</span>' : ''}</td>` : ''}
             </tr>`;
           }).join('')}
@@ -4422,6 +4429,7 @@ function renderDashboard() {
       <div class="formula-box">
         1. Most wins \u00b7 2. Most total points won \u00b7 3. Fewest total points lost \u00b7 Still tied \u2192 flagged for the officiating table
       </div>
+      <div class="helper-text" style="margin-top:8px">WP (for reference only) = Wins \u00d7 ${state.config.winWeight || 20} + \u03a3 win margins \u2212 \u03a3 loss margins</div>
       <div class="formula-strip" style="margin-top:12px">
         <div class="formula-item"><div class="formula-item-label">Game to</div><div class="formula-item-value">${state.config.pointsToWin} <span>pts</span></div></div>
         <div class="formula-item"><div class="formula-item-label">Deuce cap</div><div class="formula-item-value">${state.config.deuceCap}</div></div>

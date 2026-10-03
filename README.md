@@ -103,7 +103,7 @@ Each page is a hash route — shareable, bookmarkable, with browser back/forward
 - Per player: `wins`, `losses`, `totalPointsScored` (PF), `totalPointsConceded` (PA)
 - `sortStandings()` ranks by **wins → PF (desc) → PA (asc)**, identically in QR1 and QR2
 - Players still tied on all three get a **Tie** badge in the standings so the officiating table resolves the order deliberately; the app does not pick arbitrarily
-- `config.winWeight` is retained in saved state for backward compatibility but no longer used
+- **WP** (Weighted Points) = `wins × winWeight(20) + Σ win margins − Σ loss margins` is shown as a reference column in both standings tables but does **not** affect ranking
 
 ### Score Validation (`validateScore`)
 - Normal win: one team reaches `pointsToWin` (21), other has less
