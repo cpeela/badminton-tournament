@@ -1749,7 +1749,7 @@ body.super-admin-mode .super-admin-only { display: inline-flex !important; }
 
   th, td { padding: 0 8px; font-size: 13px; }
   td { height: 40px; }
-  .col-pf, .col-pa, .col-windiff, .col-lossdiff { display: none; }
+  .col-windiff, .col-lossdiff { display: none; }
   .col-rank { width: 40px; padding: 0 4px; }
   .col-player { max-width: 140px; white-space: normal; }
   .table-caption { margin-top: -4px; }
@@ -2912,8 +2912,7 @@ function computeStandings(playerIds, matches, config) {
       playerId: id,
       wins: 0, losses: 0, matchesPlayed: 0,
       totalPointsScored: 0, totalPointsConceded: 0,
-      winPointDiff: 0, lossPointDiff: 0,
-      weightedPoints: 0
+      winPointDiff: 0, lossPointDiff: 0
     };
   });
 
@@ -2941,29 +2940,30 @@ function computeStandings(playerIds, matches, config) {
     });
   });
 
-  Object.values(stats).forEach(s => {
-    s.weightedPoints = (s.wins * config.winWeight) + s.winPointDiff - s.lossPointDiff;
-  });
-
   return Object.values(stats);
 }
 
-function sortStandingsQR1(standings) {
-  return standings.sort((a, b) => {
-    if (b.weightedPoints !== a.weightedPoints) return b.weightedPoints - a.weightedPoints;
-    if (b.totalPointsScored !== a.totalPointsScored) return b.totalPointsScored - a.totalPointsScored;
-    return a.totalPointsConceded - b.totalPointsConceded;
-  });
+// Rank: most wins, then most points for, then fewest points against.
+function sortStandings(standings) {
+  return standings.sort((a, b) =>
+    (b.wins - a.wins) ||
+    (b.totalPointsScored - a.totalPointsScored) ||
+    (a.totalPointsConceded - b.totalPointsConceded));
 }
 
-function sortStandingsQR2(standings, qr1Rankings) {
-  return standings.sort((a, b) => {
-    if (b.weightedPoints !== a.weightedPoints) return b.weightedPoints - a.weightedPoints;
-    if (b.totalPointsScored !== a.totalPointsScored) return b.totalPointsScored - a.totalPointsScored;
-    const aRank = qr1Rankings[a.playerId] || 999;
-    const bRank = qr1Rankings[b.playerId] || 999;
-    return aRank - bRank;
-  });
+function isDeadHeat(a, b) {
+  return !!a && !!b && a.wins === b.wins &&
+    a.totalPointsScored === b.totalPointsScored &&
+    a.totalPointsConceded === b.totalPointsConceded;
+}
+
+// Flags rows that are indistinguishable from a neighbour so the officiating
+// table resolves the order deliberately instead of trusting list order.
+function tieBadge(standings, i) {
+  const s = standings[i];
+  if (!s.matchesPlayed) return '';
+  return isDeadHeat(s, standings[i - 1]) || isDeadHeat(s, standings[i + 1])
+    ? ' <span class="badge badge-warning" title="Tied on wins, points for and points against">Tie</span>' : '';
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -3062,10 +3062,6 @@ function renderSetup() {
             <label>Deuce Cap</label>
             <input type="number" inputmode="numeric" min="${c.pointsToWin}" max="40" value="${c.deuceCap}" ${dis} onchange="updateConfig('deuceCap',+this.value)">
           </div>
-          <div class="form-group">
-            <label>Win Weight</label>
-            <input type="number" inputmode="numeric" min="1" max="100" value="${c.winWeight}" ${dis} onchange="updateConfig('winWeight',+this.value)">
-          </div>
         </div>
       </div>
 
@@ -3101,7 +3097,7 @@ function renderSetup() {
         <div class="formula-item"><div class="formula-item-label">Players</div><div class="formula-item-value">${totalPlayers}</div></div>
         <div class="formula-item"><div class="formula-item-label">Champion Pool</div><div class="formula-item-value">${c.numGroups * c.advanceTop}</div></div>
         <div class="formula-item"><div class="formula-item-label">Consolation Pool</div><div class="formula-item-value">${c.numGroups * (c.playersPerGroup - c.advanceTop)}</div></div>
-        <div class="formula-item wide"><div class="formula-item-label">Weighted Points</div><div class="formula-item-value">WP <span>=</span> Wins <span>\u00d7</span> ${c.winWeight} <span>+</span> \u03a3 Win Diff <span>\u2212</span> \u03a3 Loss Diff</div></div>
+        <div class="formula-item wide"><div class="formula-item-label">Ranking</div><div class="formula-item-value">Wins <span>\u2192</span> Points For <span>\u2192</span> Points Against</div></div>
       </div>
     </div>`;
 
@@ -3522,7 +3518,7 @@ function renderQR1() {
     const gMatches = qr1.matches.filter(m => m.groupId === g.id);
     const completed = gMatches.filter(m => m.status === 'completed').length;
     const leader = g.leaderId ? getPlayerNameSafe(g.leaderId) : 'None';
-    const standings = sortStandingsQR1(computeStandings(g.playerIds, gMatches, state.config));
+    const standings = sortStandings(computeStandings(g.playerIds, gMatches, state.config));
     const pct = gMatches.length ? Math.round(completed / gMatches.length * 100) : 0;
 
     html += `<div class="card">
@@ -3544,7 +3540,6 @@ function renderQR1() {
         <table class="standings-table">
           <thead><tr>
             <th class="col-rank">#</th><th>Player</th><th class="col-num">W</th><th class="col-num">L</th><th class="col-num col-pf">PF</th><th class="col-num col-pa">PA</th>
-            <th class="col-num col-windiff">Win Diff</th><th class="col-num col-lossdiff">Loss Diff</th><th class="col-num">WP</th>
             ${qr1.status === 'completed' ? '<th>Pool</th>' : ''}
           </tr></thead>
           <tbody>
@@ -3553,12 +3548,9 @@ function renderQR1() {
               const isLeader = g.leaderId === s.playerId;
               return `<tr class="${isTop ? 'champion-row' : 'consolation-row'}">
                 <td class="col-rank">${rankCell(i + 1)}</td>
-                <td class="col-player">${getPlayerNameSafe(s.playerId)}${isLeader ? '<span class="leader-star" title="Group leader" aria-label="Group leader">★</span>' : ''}</td>
-                <td class="col-num">${s.wins}</td><td class="col-num">${s.losses}</td>
+                <td class="col-player">${getPlayerNameSafe(s.playerId)}${isLeader ? '<span class="leader-star" title="Group leader" aria-label="Group leader">★</span>' : ''}${tieBadge(standings, i)}</td>
+                <td class="col-num col-strong">${s.wins}</td><td class="col-num">${s.losses}</td>
                 <td class="col-num col-pf">${s.totalPointsScored}</td><td class="col-num col-pa">${s.totalPointsConceded}</td>
-                ${diffCell(s.winPointDiff, false, 'col-windiff')}
-                ${diffCell(s.lossPointDiff, true, 'col-lossdiff')}
-                <td class="col-num col-strong">${s.weightedPoints}</td>
                 ${qr1.status === 'completed' ? `<td><span class="badge ${isTop ? 'badge-champion' : 'badge-consolation'}">${isTop ? 'Champion' : 'Consolation'}</span></td>` : ''}
               </tr>`;
             }).join('')}
@@ -3723,7 +3715,7 @@ function doAdvanceToQR2() {
 
   state.groups.forEach(g => {
     const gMatches = state.rounds.qr1.matches.filter(m => m.groupId === g.id);
-    const standings = sortStandingsQR1(computeStandings(g.playerIds, gMatches, c));
+    const standings = sortStandings(computeStandings(g.playerIds, gMatches, c));
     standings.forEach((s, i) => {
       qr1Rankings[s.playerId] = globalRank++;
       if (i < c.advanceTop) champion.push(s.playerId);
@@ -3792,8 +3784,7 @@ function renderQR2() {
   const completed = poolMatches.filter(m => m.status === 'completed').length;
   const pct = poolMatches.length ? Math.round(completed / poolMatches.length * 100) : 0;
 
-  const qr1Rankings = state._qr1Rankings || {};
-  const standings = sortStandingsQR2(computeStandings(poolIds, poolMatches, state.config), qr1Rankings);
+  const standings = sortStandings(computeStandings(poolIds, poolMatches, state.config));
   const poolDone = qr2.poolStatus[activePool] === 'completed';
 
   html += `<div class="card">
@@ -3809,12 +3800,11 @@ function renderQR2() {
     </div>
 
     <div class="card-section-title">Standings</div>
-    <div class="table-caption">Top <strong>${state.config.semiFinalSlots}</strong> advance to the Semi-Finals · ties broken by QR1 rank</div>
+    <div class="table-caption">Top <strong>${state.config.semiFinalSlots}</strong> advance to the Semi-Finals · ranked by wins, then points for, then points against</div>
     <div class="table-wrap mb-20">
       <table class="standings-table">
         <thead><tr>
           <th class="col-rank">#</th><th>Player</th><th class="col-num">W</th><th class="col-num">L</th><th class="col-num col-pf">PF</th><th class="col-num col-pa">PA</th>
-          <th class="col-num col-windiff">Win Diff</th><th class="col-num col-lossdiff">Loss Diff</th><th class="col-num">WP</th>
           ${poolDone ? '<th>Status</th>' : ''}
         </tr></thead>
         <tbody>
@@ -3822,12 +3812,9 @@ function renderQR2() {
             const advances = i < state.config.semiFinalSlots;
             return `<tr class="${advances ? 'highlight-row' : ''}">
               <td class="col-rank">${rankCell(i + 1)}</td>
-              <td class="col-player">${getPlayerNameSafe(s.playerId)}</td>
-              <td class="col-num">${s.wins}</td><td class="col-num">${s.losses}</td>
+              <td class="col-player">${getPlayerNameSafe(s.playerId)}${tieBadge(standings, i)}</td>
+              <td class="col-num col-strong">${s.wins}</td><td class="col-num">${s.losses}</td>
               <td class="col-num col-pf">${s.totalPointsScored}</td><td class="col-num col-pa">${s.totalPointsConceded}</td>
-              ${diffCell(s.winPointDiff, false, 'col-windiff')}
-              ${diffCell(s.lossPointDiff, true, 'col-lossdiff')}
-              <td class="col-num col-strong">${s.weightedPoints}</td>
               ${poolDone ? `<td>${advances ? '<span class="badge badge-success">Advances</span>' : ''}</td>` : ''}
             </tr>`;
           }).join('')}
@@ -3871,7 +3858,6 @@ function doAdvanceToSemis(pool) {
   const c = state.config;
   const qr2 = state.rounds.qr2;
   const semis = state.rounds.semis;
-  const qr1Rankings = state._qr1Rankings || {};
   const k = c.semiFinalSlots;
 
   if (qr2.poolStatus[pool] === 'completed') return;
@@ -3885,7 +3871,7 @@ function doAdvanceToSemis(pool) {
     toast(`Complete all ${poolLabel(pool)} Pool matches first`, 'error');
     return;
   }
-  const standings = sortStandingsQR2(computeStandings(qr2.pools[pool], poolMatches, c), qr1Rankings);
+  const standings = sortStandings(computeStandings(qr2.pools[pool], poolMatches, c));
   if (standings.length < k) {
     toast(`${poolLabel(pool)} pool has only ${standings.length} players — needs ${k} for Semi-Finals`, 'error');
     return;
@@ -4423,12 +4409,12 @@ function renderDashboard() {
     <div class="card">
       <div class="card-header">
         <div>
-          <div class="card-title">Scoring System</div>
-          <div class="card-subtitle">How weighted points and advancement are calculated</div>
+          <div class="card-title">Ranking Rules</div>
+          <div class="card-subtitle">How standings and advancement are decided</div>
         </div>
       </div>
       <div class="formula-box">
-        WP = (Wins \u00d7 ${state.config.winWeight}) + \u03a3(point diff of winning matches) \u2212 \u03a3(point diff of losing matches)
+        1. Most wins \u00b7 2. Most total points won \u00b7 3. Fewest total points lost \u00b7 Still tied \u2192 flagged for the officiating table
       </div>
       <div class="formula-strip" style="margin-top:12px">
         <div class="formula-item"><div class="formula-item-label">Game to</div><div class="formula-item-value">${state.config.pointsToWin} <span>pts</span></div></div>
@@ -4603,7 +4589,7 @@ function renderBracket() {
   } else {
     state.groups.forEach(g => {
       const gMatches = state.rounds.qr1.matches.filter(m => m.groupId === g.id);
-      const standings = sortStandingsQR1(computeStandings(g.playerIds, gMatches, c));
+      const standings = sortStandings(computeStandings(g.playerIds, gMatches, c));
       html += '<div class="bracket-group">';
       html += '<div class="bracket-group-title" style="color:var(--primary)">' + g.name + '</div>';
       standings.forEach((s, i) => {
@@ -4630,15 +4616,14 @@ function renderBracket() {
       const isChamp = pool === 'champion';
       const poolIds = qr2.pools[pool];
       const poolMatches = qr2.matches.filter(m => m.pool === pool);
-      const standings = computeStandings(poolIds, poolMatches, c);
-      standings.sort((a, b) => b.weightedPoints - a.weightedPoints);
+      const standings = sortStandings(computeStandings(poolIds, poolMatches, c));
       html += '<div class="bracket-group">';
       html += '<div class="bracket-group-title" style="color:var(--' + (isChamp ? 'champion' : 'consolation') + ')">' + (isChamp ? '\uD83C\uDFC6 Champion' : '\uD83E\uDD48 Consolation') + '</div>';
       standings.forEach((s, i) => {
         const adv = i < c.semiFinalSlots;
         html += '<div class="bracket-player ' + (qr2.status === 'completed' ? (adv ? 'advances' : 'eliminated') : '') + '">';
         html += '<span>' + (i + 1) + '. ' + getPlayerNameSafe(s.playerId) + '</span>';
-        html += '<span class="bracket-match-score">' + s.weightedPoints + ' WP</span>';
+        html += '<span class="bracket-match-score">' + s.wins + 'W ' + s.losses + 'L</span>';
         html += '</div>';
       });
       html += '</div>';
