@@ -68,7 +68,7 @@ Each page is a hash route — shareable, bookmarkable, with browser back/forward
 ### 2. Qualifier R1 (Group Stage)
 - Each group plays round-robin doubles (randomized pairings)
 - `matchesPerPlayer` controls how many matches each player plays (default: 4)
-- Ranking: most wins → most total points won → fewest total points lost
+- Ranking: Weighted Points → most wins → most total points won → fewest total points lost
 - Top N per group → Pool A, rest → Pool B
 
 ### 3. Qualifier R2 (Pool Stage)
@@ -101,9 +101,9 @@ Each page is a hash route — shareable, bookmarkable, with browser back/forward
 
 ### Standings Computation (`computeStandings`)
 - Per player: `wins`, `losses`, `totalPointsScored` (PF), `totalPointsConceded` (PA)
-- `sortStandings()` ranks by **wins → PF (desc) → PA (asc)**, identically in QR1 and QR2
-- Players still tied on all three get a **Tie** badge in the standings so the officiating table resolves the order deliberately; the app does not pick arbitrarily
-- **WP** (Weighted Points) = `wins × winWeight(20) + Σ win margins − Σ loss margins` is shown as a reference column in both standings tables but does **not** affect ranking
+- `sortStandings()` ranks by **WP → wins → PF (desc) → PA (asc)**, identically in QR1 and QR2
+- Players still tied on all four get a **Tie** badge in the standings so the officiating table resolves the order deliberately; the app does not pick arbitrarily
+- **WP** (Weighted Points) = `wins × winWeight(20) + Σ win margins − Σ loss margins` is the primary ranking key
 
 ### Score Validation (`validateScore`)
 - Normal win: one team reaches `pointsToWin` (21), other has less
