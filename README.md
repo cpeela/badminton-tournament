@@ -58,7 +58,7 @@ Setup (#setup) → Qualifier R1 (#qr1) → Qualifier R2 (#qr2) → Semi-Finals (
 
 Each page is a hash route — shareable, bookmarkable, with browser back/forward navigation.
 
-**Per-pool advancement**: from QR2 onward the Champion and Consolation pools progress independently. Each pool has its own "Advance" button (QR2 → Semis, Semis → Final) that enables once that pool's matches are done, so one pool can start its final while the other is still in semis. QR1 → QR2 stays global because both pools are seeded from every group's results.
+**Per-pool advancement**: from QR2 onward Pool A and Pool B progress independently. Each pool has its own "Advance" button (QR2 → Semis, Semis → Final) that enables once that pool's matches are done, so one pool can start its final while the other is still in semis. QR1 → QR2 stays global because both pools are seeded from every group's results.
 
 ### 1. Setup
 - 30 players, 5 groups of 6
@@ -69,10 +69,10 @@ Each page is a hash route — shareable, bookmarkable, with browser back/forward
 - Each group plays round-robin doubles (randomized pairings)
 - `matchesPerPlayer` controls how many matches each player plays (default: 4)
 - Ranking: most wins → most total points won → fewest total points lost
-- Top N per group → Champion Pool, rest → Consolation Pool
+- Top N per group → Pool A, rest → Pool B
 
 ### 3. Qualifier R2 (Pool Stage)
-- Champion Pool (15 players) and Consolation Pool (15 players) play separately
+- Pool A (15 players) and Pool B (15 players) play separately
 - Same scoring formula, fresh standings
 - Top `semiFinalSlots` (default: 8) advance to semis
 
@@ -83,7 +83,7 @@ Each page is a hash route — shareable, bookmarkable, with browser back/forward
 - Winners advance to finals
 
 ### 5. Finals
-- 4 remaining players: 2 matches (Champion Final + Consolation Final)
+- 4 remaining players: 2 matches (Pool A Final + Pool B Final)
 - Per-pool format configured in Setup: **Single Game** or **Best of 3** (`championPoolFormat`, `consolationPoolFormat`)
 
 ### 6. Dashboard
@@ -244,8 +244,8 @@ No npm packages. No build tools.
 - **Success**: `#34d399` — completed states, admin badge
 - **Warning**: `#fbbf24` — alerts, champion pool
 - **Danger**: `#f87171` — errors, reset button
-- **Champion pool**: `#fbbf24` gold rows
-- **Consolation pool**: `#a78bfa` purple rows
+- **Pool A** (internal key `champion`): gold rows
+- **Pool B** (internal key `consolation`): purple rows
 - **Surfaces**: `#0c1018` → `#111827` → `#1a2233` → `#243044` (dark navy gradient)
 
 ### Component Classes

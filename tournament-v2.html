@@ -1498,6 +1498,7 @@ body.modal-open { overflow: hidden; }
 
 /* Guest mode — hide all edit controls */
 body.guest-mode .admin-only { display: none !important; }
+body.guest-mode .tab[data-tab="setup"] { display: none !important; }
 body.guest-mode .score-entry { display: none !important; }
 body.guest-mode .score-display { display: flex !important; }
 body.guest-mode .header-actions { display: none !important; }
@@ -1969,6 +1970,7 @@ const ADMIN_PIN = '2025';  // Change this to your desired PIN
 const SUPER_ADMIN_PIN = '2809';  // Super admin PIN — grants reset access
 const AUTH_SESSION_KEY = 'badminton_auth_role';
 let currentRole = null; // 'super_admin' | 'admin' | 'guest'
+let _routingReady = false;
 
 // PIN input UX — auto-advance, backspace, paste support
 (function initPinInputs() {
@@ -2054,6 +2056,9 @@ function setRole(role) {
 
   // Show logout button
   document.getElementById('logoutBtn').style.display = 'inline-flex';
+  // Skipped during initial session restore (routing consts not yet defined);
+  // init calls applyRoute() itself once everything is loaded.
+  if (_routingReady) applyRoute();
 }
 
 // Check if already authenticated this session
@@ -2386,7 +2391,8 @@ function defaultState() {
 }
 
 const POOLS = ['champion', 'consolation'];
-const poolLabel = (pool) => pool === 'champion' ? 'Champion' : 'Consolation';
+// Internal keys stay 'champion'/'consolation'; players only ever see Pool A / Pool B.
+const poolLabel = (pool) => pool === 'champion' ? 'Pool A' : 'Pool B';
 
 // Aggregate round status derived from its two pools; kept in sync so
 // header/dashboard/sync code that reads `round.status` keeps working.
@@ -3077,14 +3083,14 @@ function renderSetup() {
             <input type="number" inputmode="numeric" min="4" max="16" value="${c.semiFinalSlots}" ${dis} onchange="updateConfig('semiFinalSlots',+this.value)">
           </div>
           <div class="form-group">
-            <label>Champion Final</label>
+            <label>Pool A Final</label>
             <select ${dis} onchange="updateConfig('championPoolFormat',this.value)">
               <option value="bestOf3" ${c.championPoolFormat === 'bestOf3' ? 'selected' : ''}>Best of 3</option>
               <option value="single" ${c.championPoolFormat === 'single' ? 'selected' : ''}>Single Game</option>
             </select>
           </div>
           <div class="form-group">
-            <label>Consolation Final</label>
+            <label>Pool B Final</label>
             <select ${dis} onchange="updateConfig('consolationPoolFormat',this.value)">
               <option value="bestOf3" ${c.consolationPoolFormat === 'bestOf3' ? 'selected' : ''}>Best of 3</option>
               <option value="single" ${c.consolationPoolFormat === 'single' ? 'selected' : ''}>Single Game</option>
@@ -3095,8 +3101,8 @@ function renderSetup() {
 
       <div class="formula-strip">
         <div class="formula-item"><div class="formula-item-label">Players</div><div class="formula-item-value">${totalPlayers}</div></div>
-        <div class="formula-item"><div class="formula-item-label">Champion Pool</div><div class="formula-item-value">${c.numGroups * c.advanceTop}</div></div>
-        <div class="formula-item"><div class="formula-item-label">Consolation Pool</div><div class="formula-item-value">${c.numGroups * (c.playersPerGroup - c.advanceTop)}</div></div>
+        <div class="formula-item"><div class="formula-item-label">Pool A</div><div class="formula-item-value">${c.numGroups * c.advanceTop}</div></div>
+        <div class="formula-item"><div class="formula-item-label">Pool B</div><div class="formula-item-value">${c.numGroups * (c.playersPerGroup - c.advanceTop)}</div></div>
         <div class="formula-item wide"><div class="formula-item-label">Ranking</div><div class="formula-item-value">Wins <span>\u2192</span> Points For <span>\u2192</span> Points Against</div></div>
       </div>
     </div>`;
@@ -3535,7 +3541,7 @@ function renderQR1() {
 
       <!-- Standings -->
       <div class="card-section-title">Standings</div>
-      <div class="table-caption">Top <strong>${state.config.advanceTop}</strong> advance to the Champion Pool · remaining players go to the Consolation Pool</div>
+      <div class="table-caption">Top <strong>${state.config.advanceTop}</strong> go to Pool A · remaining players go to Pool B</div>
       <div class="table-wrap mb-20">
         <table class="standings-table">
           <thead><tr>
@@ -3551,7 +3557,7 @@ function renderQR1() {
                 <td class="col-player">${getPlayerNameSafe(s.playerId)}${isLeader ? '<span class="leader-star" title="Group leader" aria-label="Group leader">★</span>' : ''}${tieBadge(standings, i)}</td>
                 <td class="col-num col-strong">${s.wins}</td><td class="col-num">${s.losses}</td>
                 <td class="col-num col-pf">${s.totalPointsScored}</td><td class="col-num col-pa">${s.totalPointsConceded}</td>
-                ${qr1.status === 'completed' ? `<td><span class="badge ${isTop ? 'badge-champion' : 'badge-consolation'}">${isTop ? 'Champion' : 'Consolation'}</span></td>` : ''}
+                ${qr1.status === 'completed' ? `<td><span class="badge ${isTop ? 'badge-champion' : 'badge-consolation'}">${isTop ? 'Pool A' : 'Pool B'}</span></td>` : ''}
               </tr>`;
             }).join('')}
           </tbody>
@@ -3773,7 +3779,7 @@ function renderQR2() {
     const completed = pMatches.filter(m => m.status === 'completed').length;
     html += `<button class="sub-tab ${activePool === pool ? 'active' : ''}"
       onclick="state._activeQR2Pool='${pool}';renderQR2()">
-      ${pool === 'champion' ? '\uD83C\uDFC6 Champion Pool' : '\uD83E\uDD48 Consolation Pool'}
+      ${poolLabel(pool)}
       <span class="tab-badge">${completed}/${pMatches.length}</span>
     </button>`;
   });
@@ -4246,7 +4252,7 @@ function renderFinals() {
       </div>
 
       ${fm.winner ? `<div class="winner-banner ${poolColor}">
-        <div class="winner-banner-label">${isChamp ? 'Champion' : 'Consolation winner'}</div>
+        <div class="winner-banner-label">${poolLabel(fm.pool)} winner</div>
         <h3>${ICON.trophy}<span>${getPlayerNamesSafe(fm[fm.winner].playerIds)}</span></h3>
         <div class="winner-banner-sub">${isSingle ? 'Score ' + fm.games[0].team1Score + ' \u2013 ' + fm.games[0].team2Score : 'Games ' + g1 + ' \u2013 ' + g2}</div>
       </div>` : ''}
@@ -4386,7 +4392,7 @@ function renderDashboard() {
               <td class="col-strong">Qualifier Round 2</td>
               <td>${roundStatus(state.rounds.qr2)}</td>
               <td class="col-num">${roundCount(state.rounds.qr2)}</td>
-              <td>Champion + Consolation pools</td>
+              <td>Pool A + Pool B</td>
             </tr>
             <tr>
               <td class="col-strong">Semi-Finals</td>
@@ -4398,7 +4404,7 @@ function renderDashboard() {
               <td class="col-strong">Finals</td>
               <td>${roundStatus(state.rounds.finals)}</td>
               <td class="col-num">${finalsFormatLabel}</td>
-              <td>${state.rounds.finals.matches.length ? state.rounds.finals.matches.map(m => m.winner ? `${m.label}: <strong>${getPlayerNamesSafe(m[m.winner].playerIds)}</strong>` : m.label).join(' \u00b7 ') : 'Champion Final \u00b7 Consolation Final'}</td>
+              <td>${state.rounds.finals.matches.length ? state.rounds.finals.matches.map(m => m.winner ? `${m.label}: <strong>${getPlayerNamesSafe(m[m.winner].playerIds)}</strong>` : m.label).join(' \u00b7 ') : 'Pool A Final \u00b7 Pool B Final'}</td>
             </tr>
           </tbody>
         </table>
@@ -4419,7 +4425,7 @@ function renderDashboard() {
       <div class="formula-strip" style="margin-top:12px">
         <div class="formula-item"><div class="formula-item-label">Game to</div><div class="formula-item-value">${state.config.pointsToWin} <span>pts</span></div></div>
         <div class="formula-item"><div class="formula-item-label">Deuce cap</div><div class="formula-item-value">${state.config.deuceCap}</div></div>
-        <div class="formula-item"><div class="formula-item-label">Champion Pool</div><div class="formula-item-value">Top ${state.config.advanceTop} <span>/ group</span></div></div>
+        <div class="formula-item"><div class="formula-item-label">Pool A</div><div class="formula-item-value">Top ${state.config.advanceTop} <span>/ group</span></div></div>
         <div class="formula-item"><div class="formula-item-label">Semi-Finals</div><div class="formula-item-value">Top ${state.config.semiFinalSlots} <span>/ pool</span></div></div>
       </div>
     </div>
@@ -4428,7 +4434,7 @@ function renderDashboard() {
   // Champions section
   if (state.rounds.finals.matches.some(fm => fm.winner)) {
     html += `<div class="card champions-card">
-      <div class="card-title mb-16">${ICON.trophy}<span>Tournament Champions</span></div>`;
+      <div class="card-title mb-16">${ICON.trophy}<span>Tournament Winners</span></div>`;
     state.rounds.finals.matches.forEach(fm => {
       if (fm.winner) {
         html += `<div class="winner-banner ${fm.pool}">
@@ -4498,7 +4504,7 @@ function renderBracket() {
   ['champion', 'consolation'].forEach(pool => {
     const isChamp = pool === 'champion';
     html += '<div class="bk-pool">';
-    html += '<div class="bk-pool-title ' + pool + '">' + (isChamp ? 'Champion Bracket' : 'Consolation Bracket') + '</div>';
+    html += '<div class="bk-pool-title ' + pool + '">' + poolLabel(pool) + ' Bracket' + '</div>';
 
     html += '<div class="bk-scroll">';
     html += '<div class="bk-round-titles"><div class="bk-round-title">Semi-Finals</div><div class="bk-round-title">Final</div><div class="bk-round-title">Winner</div></div>';
@@ -4546,7 +4552,7 @@ function renderBracket() {
       }
       html += bkMatchBox(pFinal.label, t1N, t2N, t1S, t2S, pFinal.winner, pFinal.format || 'bestOf3');
     } else {
-      html += '<div class="bk-awaiting">' + (isChamp ? 'Champion' : 'Consolation') + ' Final<br>Awaiting Semis</div>';
+      html += '<div class="bk-awaiting">' + poolLabel(pool) + ' Final<br>Awaiting Semis</div>';
     }
     html += '</div>';
 
@@ -4560,7 +4566,7 @@ function renderBracket() {
       html += '<div class="bk-winner ' + pool + '">';
       html += '<div class="bk-winner-icon">' + ICON.trophy + '</div>';
       html += '<div class="bk-winner-name">' + wNames + '</div>';
-      html += '<div class="bk-winner-sub">' + (isChamp ? 'Champion' : 'Consolation winner') + '</div>';
+      html += '<div class="bk-winner-sub">' + poolLabel(pool) + ' winner</div>';
       html += '</div>';
     } else {
       html += '<div class="bk-awaiting">Winner<br>TBD</div>';
@@ -4609,8 +4615,8 @@ function renderBracket() {
   html += '<div class="bracket-stage-title">QR2 \u2014 Pools</div>';
   const qr2 = state.rounds.qr2;
   if (qr2.status === 'not_started') {
-    html += '<div class="bracket-group"><div class="bracket-group-title" style="color:var(--champion)">\uD83C\uDFC6 Champion Pool</div><div class="bracket-player" style="color:var(--text-muted)">Top ' + c.advanceTop + ' per group</div></div>';
-    html += '<div class="bracket-group"><div class="bracket-group-title" style="color:var(--consolation)">\uD83E\uDD48 Consolation Pool</div><div class="bracket-player" style="color:var(--text-muted)">Remaining players</div></div>';
+    html += '<div class="bracket-group"><div class="bracket-group-title" style="color:var(--champion)">Pool A</div><div class="bracket-player" style="color:var(--text-muted)">Top ' + c.advanceTop + ' per group</div></div>';
+    html += '<div class="bracket-group"><div class="bracket-group-title" style="color:var(--consolation)">Pool B</div><div class="bracket-player" style="color:var(--text-muted)">Remaining players</div></div>';
   } else {
     ['champion', 'consolation'].forEach(pool => {
       const isChamp = pool === 'champion';
@@ -4618,7 +4624,7 @@ function renderBracket() {
       const poolMatches = qr2.matches.filter(m => m.pool === pool);
       const standings = sortStandings(computeStandings(poolIds, poolMatches, c));
       html += '<div class="bracket-group">';
-      html += '<div class="bracket-group-title" style="color:var(--' + (isChamp ? 'champion' : 'consolation') + ')">' + (isChamp ? '\uD83C\uDFC6 Champion' : '\uD83E\uDD48 Consolation') + '</div>';
+      html += '<div class="bracket-group-title" style="color:var(--' + (isChamp ? 'champion' : 'consolation') + ')">' + poolLabel(pool) + '</div>';
       standings.forEach((s, i) => {
         const adv = i < c.semiFinalSlots;
         html += '<div class="bracket-player ' + (qr2.status === 'completed' ? (adv ? 'advances' : 'eliminated') : '') + '">';
@@ -4642,7 +4648,7 @@ function renderBracket() {
       const isChamp = pool === 'champion';
       const pMatches = semis.matches.filter(m => m.pool === pool);
       html += '<div class="bracket-group">';
-      html += '<div class="bracket-group-title" style="color:var(--' + (isChamp ? 'champion' : 'consolation') + ')">' + (isChamp ? '\uD83C\uDFC6 Champion' : '\uD83E\uDD48 Consolation') + '</div>';
+      html += '<div class="bracket-group-title" style="color:var(--' + (isChamp ? 'champion' : 'consolation') + ')">' + poolLabel(pool) + '</div>';
       if (!pMatches.length) html += '<div class="bracket-player" style="color:var(--text-muted)">Awaiting QR2</div>';
       pMatches.forEach(m => {
         html += '<div class="bracket-match">';
@@ -4722,6 +4728,7 @@ function renderBracket() {
 // ═══════════════════════════════════════════════════════════════
 
 const VALID_PAGES = ['setup', 'qr1', 'qr2', 'semis', 'finals', 'dashboard'];
+_routingReady = true;
 
 function switchTab(tabId) {
   if (VALID_PAGES.includes(tabId)) {
@@ -4731,7 +4738,8 @@ function switchTab(tabId) {
 
 function applyRoute() {
   const hash = window.location.hash.replace('#', '');
-  const tabId = VALID_PAGES.includes(hash) ? hash : 'setup';
+  let tabId = VALID_PAGES.includes(hash) ? hash : 'setup';
+  if (tabId === 'setup' && currentRole === 'guest') tabId = 'qr1';
   document.querySelectorAll('.tab').forEach(t => {
     const isActive = t.dataset.tab === tabId;
     t.setAttribute('aria-selected', isActive);
@@ -4751,7 +4759,7 @@ document.getElementById('mainTabs').addEventListener('click', (e) => {
 
 // Keyboard navigation for tabs
 document.getElementById('mainTabs').addEventListener('keydown', (e) => {
-  const tabs = [...document.querySelectorAll('.tab')];
+  const tabs = [...document.querySelectorAll('.tab')].filter(t => t.offsetParent !== null);
   const current = tabs.findIndex(t => t.getAttribute('aria-selected') === 'true');
   let next = -1;
 
